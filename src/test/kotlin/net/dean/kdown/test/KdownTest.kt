@@ -7,9 +7,9 @@ import org.testng.annotations.BeforeClass as beforeClass
 import org.testng.annotations.Test as test
 import org.testng.annotations.BeforeMethod as beforeMethod
 import net.dean.kdown.Kdown
-import net.dean.kdown.UrlTransformer
+import net.dean.kdown.ResourceIdentifier
 import net.dean.kdown.DownloadRequest
-import net.dean.kdown.ImgurTransformer
+import net.dean.kdown.ImgurResourceIdentifier
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlin.properties.Delegates
 import com.fasterxml.jackson.databind.JsonNode
@@ -33,8 +33,8 @@ public class KdownTest {
     }
 
     public test fun downloadWithBasicTransformer() {
-        // Note that this is not testing the BasicTransformer class, but rather the UrlTransformer trafile in general
-        dl.transformers.add(BasicTransformer(url, setOf("https://i.imgur.com/ILyfCJr.gif")))
+        // Note that this is not testing the BasicTransformer class, but rather the ResourceIdentifier trait in general
+        dl.identifiers.add(BasicTransformer(url, setOf("https://i.imgur.com/ILyfCJr.gif")))
         assertDownloaded(dl.download(DownloadRequest(url, dir)))
     }
 
@@ -44,7 +44,7 @@ public class KdownTest {
                 "https://i.imgur.com/FULeSIt.png",
                 "https://i.imgur.com/irzzg2F.png"
         )
-        dl.transformers.add(BasicTransformer(url, expected))
+        dl.identifiers.add(BasicTransformer(url, expected))
 
         val actual = dl.download(DownloadRequest(url, dir))
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
@@ -57,7 +57,7 @@ public class KdownTest {
                 "https://i.imgur.com/FULeSIt.png",
                 "https://i.imgur.com/irzzg2F.png"
         )
-        dl.transformers.add(BasicTransformer(url, expected))
+        dl.identifiers.add(BasicTransformer(url, expected))
 
         dl.downloadAsync(DownloadRequest(url, dir),
                 success = { assertDownloaded(it) },
@@ -74,7 +74,7 @@ public class KdownTest {
                 "https://i.imgur.com/Yr0L3hI.png",
                 "https://i.imgur.com/l0JtV5D.png"
         )
-        dl.transformers.add(ImgurTransformer(dl.rest, getSecret("IMGUR")))
+        dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
         val actual = dl.download(DownloadRequest("https://imgur.com/a/C1yQx", dir))
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
@@ -91,7 +91,7 @@ public class KdownTest {
                 "https://i.imgur.com/ZTdBuBl.png"
         )
 
-        dl.transformers.add(ImgurTransformer(dl.rest, getSecret("IMGUR")))
+        dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
         val actual = dl.download(DownloadRequest("https://imgur.com/gallery/0rH2B", dir))
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
@@ -102,7 +102,7 @@ public class KdownTest {
     }
 
     public beforeMethod fun beforeTest() {
-        dl.transformers.clear()
+        dl.identifiers.clear()
     }
 
     private fun assertDownloaded(files: Set<File>) {
@@ -139,12 +139,12 @@ private fun getSecret(name: String): String {
 /**
  * A transformer that will transform a URL if and only if the given URL is equal to the URL given in the constructor
  */
-private class BasicTransformer(private val url: String, private val result: Set<String>) : UrlTransformer {
-    override fun transform(url: URL): Set<String> {
+private class BasicTransformer(private val url: String, private val result: Set<String>) : ResourceIdentifier {
+    override fun find(url: URL): Set<String> {
         return result
     }
 
-    override fun willTransform(url: URL): Boolean {
+    override fun canFind(url: URL): Boolean {
         return url.equals(url)
     }
 }

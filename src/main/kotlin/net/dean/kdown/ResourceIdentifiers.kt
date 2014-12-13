@@ -6,37 +6,37 @@ import java.util.HashSet
 import com.fasterxml.jackson.databind.JsonNode
 
 /**
- * The UrlTransformer trait is used to change one URL into one or many other URLs. A sample use case would be if an
+ * The ResourceIdentifier trait is used to change one URL into one or many other URLs. A sample use case would be if an
  * imgur album was given to download (such as [this one](https://imgur.com/a/szz8j)). One could make use of the imgur
- * API to retrieve a list of images in said gallery and return this data in the [transform] method.
+ * API to retrieve a list of images in said album and return this data in the [find] method.
  *
- * This pattern allows for the abstraction of downloading "resources", not just files, where a resource can be consisted
- * of one or more files.
+ * This pattern allows for the downloading of "resources", not just files, where a resource can consist of one or more
+ * file.
  */
-public trait UrlTransformer {
+public trait ResourceIdentifier {
     /**
-     * Tests if this UrlTransformer will operate on the given URL. If true, then [transform] will be called directly
+     * Tests if this ResourceIdentifier will operate on the given URL. If true, then [find] will be called directly
      * after.
      */
-    public fun willTransform(url: URL): Boolean
+    public fun canFind(url: URL): Boolean
 
     /**
-     * Transforms one URL into a Set of other URLs. The resulting Set must contain at least one element, and every
-     * element in the Set must be a valid URL. If this method is called, then it is guaranteed that [willTransform] has
+     * Finds the resources located in the given URL. The resulting Set must contain at least one element, and every
+     * element in the Set must be a valid URL. If this method is called, then it can be assumed that [canFind] has
      * already returned true.
      */
-    public fun transform(url: URL): Set<String>
+    public fun find(url: URL): Set<String>
 }
 
 /**
- * This class is an abstraction of [UrlTransformer] that will transform a URL if and only it matches a regular
+ * This class is an abstraction of [ResourceIdentifier] that will transform a URL if and only it matches a regular
  * expression found in the key set of [regexes]. [regexes] is a Map of regular expressions to a unique identification
  * string for that resource. For example, on regex might match a single image, and another might match an entire
  * collection of images.
  */
-public abstract class RegexUrlTransformer(public val regexes: Map<String, String>) : UrlTransformer {
+public abstract class RegexResourceIdentifier(public val regexes: Map<String, String>) : ResourceIdentifier {
 
-    override fun willTransform(url: URL): Boolean {
+    override fun canFind(url: URL): Boolean {
         val urlString = url.toExternalForm()
 
         for (regex in regexes.keySet()) {
@@ -45,7 +45,7 @@ public abstract class RegexUrlTransformer(public val regexes: Map<String, String
         return false
     }
 
-    override fun transform(url: URL): Set<String> {
+    override fun find(url: URL): Set<String> {
         val urlString = url.toExternalForm()
 
         for ((regex, resourceType) in regexes) {
@@ -71,15 +71,15 @@ public abstract class RegexUrlTransformer(public val regexes: Map<String, String
     }
 }
 
-/** A basic RegexUrlTransformer whose only resource type is named "it" */
-public abstract class SimpleRegexUrlTransformer(regex: String) : RegexUrlTransformer(mapOf(regex to "it"))
+/** A basic RegexResourceIdentifier whose only resource type is named "it" */
+public abstract class SimpleRegexResourceIdentifier(regex: String) : RegexResourceIdentifier(mapOf(regex to "it"))
 
 /**
  * This class uses the imgur API to retrieve links based on the given resource URL. Only links to albums and galleries
  * are supported at this time.
  */
-public class ImgurTransformer(val rest: RestClient, val clientId: String) :
-        RegexUrlTransformer(mapOf(
+public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String) :
+        RegexResourceIdentifier(mapOf(
                 """http[s]?://imgur\.com/a/(\w+)""" to "album",
                 """http[s]?://imgur\.com/gallery/(\w+)""" to "gallery"
         )) {

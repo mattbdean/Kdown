@@ -18,7 +18,7 @@ public class Kdown(userAgent: String) {
     /** Headers that will be sent with every request */
     public val defaultHeaders: MutableMap<String, String> = HashMap()
     /** UrlTransformers that will be queried before sending the final request */
-    public val transformers: MutableList<UrlTransformer> = ArrayList()
+    public val identifiers: MutableList<ResourceIdentifier> = ArrayList()
     public val http: OkHttpClient = OkHttpClient()
     public val rest: RestClient = RestClient(http, userAgent);
 
@@ -58,7 +58,7 @@ public class Kdown(userAgent: String) {
         }
     }
 
-    /** Downloads a file synchronously and returns the set of files that were downloaded */
+    /** Downloads a resource synchronously and returns the set of files that were downloaded */
     public fun download(request: DownloadRequest): Set<File> {
         log.info("Requested to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
@@ -140,10 +140,10 @@ public class Kdown(userAgent: String) {
     /** Finds the first transform that can transform the given URL and returns the new URL(s) */
     private fun findDownloadTargets(url: String): Set<String> {
         log.debug("Trying to resolve URL '$url'")
-        for (transformer in transformers) {
+        for (identifier in identifiers) {
             val u = URL(url)
-            if (transformer.willTransform(u)) {
-                val resolved = transformer.transform(u)
+            if (identifier.canFind(u)) {
+                val resolved = identifier.find(u)
                 log.debug("Resolved '$url' to '$resolved'")
                 return resolved
             }
