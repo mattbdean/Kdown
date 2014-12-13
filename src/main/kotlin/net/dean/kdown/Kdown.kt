@@ -15,11 +15,12 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 public class Kdown(userAgent: String) {
-    private val client: OkHttpClient = OkHttpClient()
     /** Headers that will be sent with every request */
     public val defaultHeaders: MutableMap<String, String> = HashMap()
     /** UrlTransformers that will be queried before sending the final request */
-    public val transformers: MutableList<UrlTransformer> = ArrayList();
+    public val transformers: MutableList<UrlTransformer> = ArrayList()
+    public val http: OkHttpClient = OkHttpClient()
+    public val rest: RestClient = RestClient(http, userAgent);
 
     {
         defaultHeaders.put("User-Agent", userAgent)
@@ -44,7 +45,7 @@ public class Kdown(userAgent: String) {
         // Add an call for each target
         targets.forEach {
             val httpRequest = buildRequest(it)
-            client.newCall(httpRequest).enqueue(object: Callback {
+            http.newCall(httpRequest).enqueue(object: Callback {
                 override fun onFailure(request: Request, e: IOException) { fail(request, e) }
                 override fun onResponse(response: Response?) {
                     try {
@@ -71,7 +72,7 @@ public class Kdown(userAgent: String) {
         val downloads: MutableSet<File> = HashSet()
         targets.forEach {
             val httpRequest = buildRequest(it)
-            val response = client.newCall(httpRequest).execute()
+            val response = http.newCall(httpRequest).execute()
             downloads.add(transferResponse(request, response))
         }
 
@@ -162,27 +163,10 @@ public class Kdown(userAgent: String) {
 }
 
 /**
- * The UrlTransformer trait is used to change one URL into one or many other URLs. A sample use case would be if an
- * imgur album was given to download (such as [this one](https://imgur.com/a/szz8j)). One could make use of the imgur
- * API to retrieve a list of images in said gallery and return this data in the [transform] method.
- */
-public trait UrlTransformer {
-    /**
-     * Tests if this UrlTransformer will operate on the given URL. If true, then [transform] will be called directly
-     * after.
-     */
-    public fun willTransform(url: URL): Boolean
-    /**
-     * Transforms one URL into a set of other URLs. The resulting Set must contain at least one element, and every
-     * element in the Set must be a valid URL
-     */
-    public fun transform(url: URL): Set<String>
-}
-
-/**
  * Provides a combination of variables used to make a download, including the URL to request, the directory to save the
  * file to, and the Content-Types that will be acceptable for the HTTP response. If no Content-Types are given, the
- * response's content type is discarded and the file will be downloaded in any case
+ * response's content type is discarded and the file will be downloaded in any case. If a [UrlTransformer] turns this
+ * request into multiple files, each file will be checked against the Content-Types.
  */
 public data class DownloadRequest(public val url: String,
                                   public val directory: File,
@@ -193,5 +177,5 @@ public data class DownloadRequest(public val url: String,
  */
 public class NetworkException(public val code: Int): Exception("Request returned unsuccessul response: $code")
 
-private val log: Logger = LoggerFactory.getLogger(javaClass<Kdown>().getSimpleName())
+val log: Logger = LoggerFactory.getLogger(javaClass<Kdown>().getSimpleName())
 

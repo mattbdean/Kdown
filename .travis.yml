@@ -1,6 +1,9 @@
 language: java
 jdk:
-  - oraclejdk7
+- oraclejdk7
 script:
-  - ./gradlew test
-
+- "./gradlew test"
+env:
+  global:
+    # "IMGUR": Imgur API client ID
+    secure: egWDVm/2uKxFOgFjjt69wkI7sgv1ZWEvfmGE4l/4axRic0bLhV5jkei6qOfSIdr3KhKS5JxOSimrSb176abscfAE0QalUovPNH53DgZ5Vy6lPtHpZgFFHvU+NPqjldQnsKJTpmMf0NxWt/AbpRLtcqKpDj94cgFLPt52c6wK3LA=
