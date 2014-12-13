@@ -9,7 +9,6 @@ import org.testng.annotations.BeforeMethod as beforeMethod
 import net.dean.kdown.Kdown
 import net.dean.kdown.UrlTransformer
 import net.dean.kdown.DownloadRequest
-import com.squareup.okhttp.Response
 
 public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")

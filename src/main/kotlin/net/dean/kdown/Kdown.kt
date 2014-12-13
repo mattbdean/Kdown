@@ -27,7 +27,8 @@ public class Kdown(userAgent: String) {
 
     /**
      * Downloads a file asynchronously. The two callback functions ([success] and [fail]) are called on the successful
-     * download of a file and on a failure respectively.
+     * download of a file and on a failure respectively. Note that if a UrlTransformer is used and it creates multiple
+     * download targets, [success] and [fail] will be called *for each file*
      */
     public fun downloadAsync(request: DownloadRequest,
                        success: (file: File) -> Unit = {},
@@ -91,9 +92,7 @@ public class Kdown(userAgent: String) {
         return requestBuilder.build()
     }
 
-    /**
-     * Transfers the body of a response (file) to the request's directory
-     */
+    /** Transfers the body of a response (file) to the download request's directory */
     throws(javaClass<IllegalStateException>())
     private fun transferResponse(request: DownloadRequest, response: Response): File {
         if (!response.isSuccessful()) {
