@@ -1,0 +1,41 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:0.9.66' // M9
+    }
+}
+
+apply plugin: "kotlin"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.jetbrains.kotlin:kotlin-stdlib:0.9.66' // M9
+    compile 'com.squareup.okhttp:okhttp:2.1.0'
+    compile 'org.slf4j:slf4j-api:1.7.7'
+    testCompile 'org.slf4j:slf4j-simple:1.7.7'
+    testCompile 'org.testng:testng:6.8.8'
+}
+
+version = '1.0.0'
+
+task wrapper(type: Wrapper) {
+  gradleVersion = '2.2'
+  distributionUrl = 'http://services.gradle.org/distributions/gradle-2.2-all.zip'
+}
+
+test {
+    useTestNG()
+    testLogging {
+        // Show stderr and stdout (useful for exceptions)
+        showStandardStreams = true
+    }
+
+    beforeTest { descriptor ->
+        logger.lifecycle("Running test: ${descriptor.className}.${descriptor.name}")
+    }
+}
