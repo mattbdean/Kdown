@@ -12,7 +12,7 @@ import net.dean.kdown.DownloadRequest
 import com.squareup.okhttp.Response
 
 public class KdownTest {
-    private val dl = Kdown("KdownTest by gfilehub.com/thatJavaNerd")
+    private val dl = Kdown("KdownTest by github.com/thatJavaNerd")
     private val url = "https://i.imgur.com/jxQ3mNq.jpg"
     private val dir = File("test-downloads")
 
@@ -21,7 +21,7 @@ public class KdownTest {
         assertDownloaded(dl.download(DownloadRequest(url, dir)))
     }
 
-    public test fun downloadWfilehContentTypes() {
+    public test fun downloadWithContentTypes() {
         assertDownloaded(dl.download(DownloadRequest(url, dir, "image/jpeg", "image/png", "image/gif")))
     }
 
@@ -29,7 +29,7 @@ public class KdownTest {
         dl.download(DownloadRequest(url, dir, "invalid/type"))
     }
 
-    public test fun downloadWfilehBasicTransformer() {
+    public test fun downloadWithBasicTransformer() {
         // Note that this is not testing the BasicTransformer class, but rather the UrlTransformer trafile in general
         dl.transformers.add(object: BasicTransformer(url) {
             override fun transform(url: URL): Set<String> {
@@ -70,7 +70,7 @@ public class KdownTest {
 
         dl.downloadAsync(DownloadRequest(url, dir),
                 success = { assertDownloaded(it) },
-                fail = {(request, exception) -> Assert.fail("Async request to ${request.url()} failed", exception)})
+                fail = { (request, exception) -> Assert.fail("Async request to ${request.url()} failed", exception) })
     }
 
     public beforeClass fun beforeClass() {
