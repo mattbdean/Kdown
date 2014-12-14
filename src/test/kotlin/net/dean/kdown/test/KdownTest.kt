@@ -24,6 +24,10 @@ public class KdownTest {
         assertDownloaded(dl.download(DownloadRequest(url, dir)))
     }
 
+    public test fun downloadWithQueryAndFragment() {
+        assertDownloaded(dl.download(DownloadRequest(url + "?foo=bar#test", dir)))
+    }
+
     public test fun downloadWithContentTypes() {
         assertDownloaded(dl.download(DownloadRequest(url, dir, "image/jpeg", "image/png", "image/gif")))
     }
@@ -75,7 +79,7 @@ public class KdownTest {
                 "https://i.imgur.com/l0JtV5D.png"
         )
         dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
-        val actual = dl.download(DownloadRequest("https://imgur.com/a/C1yQx", dir))
+        val actual = dl.download(DownloadRequest("https://imgur.com/a/C1yQx?extraQuery", dir))
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
@@ -94,6 +98,13 @@ public class KdownTest {
         dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
         val actual = dl.download(DownloadRequest("https://imgur.com/gallery/0rH2B", dir))
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertDownloaded(actual)
+    }
+
+    public test fun imgurImage() {
+        dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
+        val actual = dl.download(DownloadRequest("https://imgur.com/2ZKaO7c", dir, "image/gif", "image/webm"))
+        Assert.assertEquals(actual.size(), 1, "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 

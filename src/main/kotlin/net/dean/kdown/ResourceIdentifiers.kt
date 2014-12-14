@@ -64,10 +64,27 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
     abstract fun transform(url: URL, resourceType: String, effectiveRegex: String): Set<String>
 
     /** Retrieves capture group [n] in the given regular expression */
-    public fun captureGroup(regex: String, str: CharSequence, n: Int): String {
+    protected fun captureGroup(regex: String, str: CharSequence, n: Int): String {
         val matcher = Pattern.compile(regex).matcher(str)
         matcher.matches()
         return matcher.group(n)
+    }
+
+    /**
+     * Removes any characters after the question mark, and then removes any characters after a number sign (#). For
+     * example, both `stripQuery("/path/subpath?foo=bar#ref")` and `stripQuery("/path/subpath#ref")` return
+     * `/path/subpath`.
+     */
+    public fun stripQuery(path: String): String {
+        fun stripFrom(char: Char, str: String): String {
+            val index = str.indexOf(char)
+            if (index != -1 && index - 1 > 0) {
+                return str.substring(0, index)
+            }
+
+            return str
+        }
+        return stripFrom('?', stripFrom('#', path))
     }
 }
 
@@ -75,31 +92,40 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
 public abstract class SimpleRegexResourceIdentifier(regex: String) : RegexResourceIdentifier(mapOf(regex to "it"))
 
 /**
- * This class uses the imgur API to retrieve links based on the given resource URL. Only links to albums and galleries
- * are supported at this time.
+ * This class uses the imgur API to retrieve links based on the given resource URL. Links to albums (/a/...), galleries
+ * (/gallery/...) and images (/...) are supported.
  */
 public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String) :
             RegexResourceIdentifier(mapOf(
-                    RegexUtils.ofUrl(host = "imgur\\.com", path = "/a/(\\w+)") to "album",
-                    RegexUtils.ofUrl(host = "imgur\\.com", path = "/gallery/(\\w+)") to "gallery"
+                    RegexUtils.ofUrlGlob(host = "imgur.com", path = "/a/*") to "album",
+                    RegexUtils.ofUrlGlob(host = "imgur.com", path = "/gallery/*") to "gallery",
+                    RegexUtils.ofUrl(host = "imgur\\.com", path = "/([a-zA-Z1-9]{6,})") to "image"
             )) {
 
     private val headers = mapOf("Authorization" to "Client-ID $clientId")
 
     override fun transform(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
         val urlString = url.toExternalForm()
+        fun id(): String = stripQuery(captureGroup(effectiveRegex, urlString, 1))
 
         when (resourceType) {
             "album" -> {
-                val album = captureGroup(effectiveRegex, urlString, 1)
+                val album = id()
+                // The capture group might have caught some query args or fragments
                 val json = rest.get("https://api.imgur.com/3/album/$album/images", headers = headers).json
                 return parseLinks(json!!.get("data"))
             }
             "gallery" -> {
-                val galleryAlbum = captureGroup(effectiveRegex, urlString, 1)
+                val galleryAlbum = id()
                 val json = rest.get("https://api.imgur.com/3/gallery/album/$galleryAlbum", headers = headers).json
                 checkError(json!!)
                 return parseLinks(json.get("data").get("images"))
+            }
+            "image" -> {
+                val id = id()
+                val json = rest.get("https://api.imgur.com/3/image/$id", headers = headers).json
+                checkError(json!!)
+                return setOf(json.get("data").get("link").asText())
             }
         }
 
