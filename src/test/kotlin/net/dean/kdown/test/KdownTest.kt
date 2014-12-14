@@ -1,6 +1,8 @@
 package net.dean.kdown.test
 
+import kotlin.properties.Delegates
 import java.io.File
+import java.io.InputStream
 import java.net.URL
 import org.testng.Assert
 import org.testng.annotations.BeforeClass as beforeClass
@@ -10,10 +12,8 @@ import net.dean.kdown.Kdown
 import net.dean.kdown.ResourceIdentifier
 import net.dean.kdown.DownloadRequest
 import net.dean.kdown.ImgurResourceIdentifier
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import kotlin.properties.Delegates
 import com.fasterxml.jackson.databind.JsonNode
-import java.io.InputStream
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")

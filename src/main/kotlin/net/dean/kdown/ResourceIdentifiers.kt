@@ -79,10 +79,10 @@ public abstract class SimpleRegexResourceIdentifier(regex: String) : RegexResour
  * are supported at this time.
  */
 public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String) :
-        RegexResourceIdentifier(mapOf(
-                """http[s]?://imgur\.com/a/(\w+)""" to "album",
-                """http[s]?://imgur\.com/gallery/(\w+)""" to "gallery"
-        )) {
+            RegexResourceIdentifier(mapOf(
+                    RegexUtils.ofUrl(host = "imgur\\.com", path = "/a/(\\w+)") to "album",
+                    RegexUtils.ofUrl(host = "imgur\\.com", path = "/gallery/(\\w+)") to "gallery"
+            )) {
 
     private val headers = mapOf("Authorization" to "Client-ID $clientId")
 
@@ -116,7 +116,7 @@ public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String)
     }
 
     private fun checkError(json: JsonNode?) {
-        json!!
+        json!! // Assert not null
 
         if (!json.get("success").asBoolean(false)) {
             throw IllegalStateException("Imgur API returned an error: ${json.get("data").get("error").asText()}")
