@@ -37,7 +37,7 @@ public data class RestResponse(response: Response) {
     /** A list of all the headers received from the server */
     public val headers: Headers
     /** The root node of the JSON */
-    public val json: JsonNode?
+    public val json: JsonNode
     /** The raw data of the response's content */
     public val raw: String
     /** The Content-Type returned from the response */
@@ -48,11 +48,16 @@ public data class RestResponse(response: Response) {
         this.raw = response.body().string()
         this.type = MediaType.parse(response.header("Content-Type"));
 
-        if (type.toString().startsWith("application/json") && !raw.isEmpty()) {
-            this.json = objectMapper.readTree(raw)
-        } else {
-            // Init JSON-related final variables
-            this.json = null;
+        if (!type.toString().startsWith("application/json") && !raw.isEmpty()) {
+            throw IllegalArgumentException("Content type was not application/json")
         }
+        this.json = objectMapper.readTree(raw)
     }
+}
+
+public trait ApiConsumer {
+    protected val rest: RestClient
+
+    throws(javaClass<IllegalStateException>())
+    protected fun checkForError(root: JsonNode)
 }

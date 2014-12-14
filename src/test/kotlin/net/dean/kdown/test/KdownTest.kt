@@ -14,6 +14,7 @@ import net.dean.kdown.ImgurResourceIdentifier
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.dean.kdown.ImgurGifFormat
+import net.dean.kdown.GfycatResourceIdentifier
 
 public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")
@@ -115,6 +116,11 @@ public class KdownTest {
         dl.identifiers.add(identifier)
         val actual = dl.download(urlGif, dir, "video/webm")
         assertDownloaded(actual)
+    }
+
+    public test fun gfycat() {
+        dl.identifiers.add(GfycatResourceIdentifier(dl.rest))
+        assertDownloaded(dl.download("https://gfycat.com/EagerSillyDogfish", dir, "video/webm"))
     }
 
     public beforeClass fun beforeClass() {

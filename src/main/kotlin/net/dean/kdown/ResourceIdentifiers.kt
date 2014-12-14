@@ -57,7 +57,7 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
 
         for ((regex, resourceType) in regexes) {
             if (urlString.matches(regex)) {
-                return transform(url, resourceType, regex)
+                return find(url, resourceType, regex)
             }
         }
 
@@ -68,7 +68,7 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
      * This method is responsible for identifying the files in a resource. [effectiveRegex] is the key in [regexes] that
      * matched the given URL, and [resourceType] is the unique identifying value for that regular expression.
      */
-    abstract fun transform(url: URL, resourceType: String, effectiveRegex: String): Set<String>
+    abstract fun find(url: URL, resourceType: String, effectiveRegex: String): Set<String>
 
     /** Retrieves capture group [n] in the given regular expression */
     protected fun captureGroup(regex: String, str: CharSequence, n: Int): String {
@@ -105,9 +105,13 @@ public enum class ImgurGifFormat(private val overrideName: String = "") {
     public val jsonName: String
         get() = if (overrideName.isEmpty()) name().toLowerCase() else overrideName
 
+    /** GIF image (image/gif) */
     GIF : ImgurGifFormat("link")
+    /** Imgur's GIFV format (video/webm) */
     GIFV: ImgurGifFormat()
+    /** WebM (video/webm) */
     WEBM: ImgurGifFormat()
+    /** MP4 video (video/mp4) */
     MP4 : ImgurGifFormat()
 }
 
@@ -116,18 +120,20 @@ public enum class ImgurGifFormat(private val overrideName: String = "") {
  * (/gallery/...) and images (/...) are supported. When downloading GIFs, there are several different file types to
  * choose from: GIF, GIFV, WEBM, and MP4. This can be changed by modifying the value of [resourceVersion].
  */
-public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String) :
+public class ImgurResourceIdentifier(rest: RestClient, val clientId: String) :
             AltDownloadFormats<ImgurGifFormat>,
+            ApiConsumer,
             RegexResourceIdentifier(mapOf(
                     RegexUtils.ofUrlGlob(host = "imgur.com", path = "/a/*") to "album",
                     RegexUtils.ofUrlGlob(host = "imgur.com", path = "/gallery/*") to "gallery",
                     RegexUtils.ofUrl(host = "imgur\\.com", path = "/([a-zA-Z1-9]{6,})") to "image"
             )) {
+    override val rest: RestClient = rest
 
     public override var resourceVersion: ImgurGifFormat = ImgurGifFormat.GIF
     private val headers = mapOf("Authorization" to "Client-ID $clientId")
 
-    override fun transform(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
+    override fun find(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
         val urlString = url.toExternalForm()
         fun id(): String = stripQuery(captureGroup(effectiveRegex, urlString, 1))
 
@@ -136,18 +142,18 @@ public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String)
                 val album = id()
                 // The capture group might have caught some query args or fragments
                 val json = rest.get("https://api.imgur.com/3/album/$album/images", headers = headers).json
-                return parseLinks(json!!.get("data"))
+                return parseLinks(json.get("data"))
             }
             "gallery" -> {
                 val galleryAlbum = id()
                 val json = rest.get("https://api.imgur.com/3/gallery/album/$galleryAlbum", headers = headers).json
-                checkError(json!!)
+                checkForError(json)
                 return parseLinks(json.get("data").get("images"))
             }
             "image" -> {
                 val id = id()
                 val json = rest.get("https://api.imgur.com/3/image/$id", headers = headers).json
-                checkError(json!!)
+                checkForError(json)
                 val data = json.get("data")
                 val jsonKey = if (data.has(resourceVersion.jsonName)) resourceVersion.jsonName else "link"
                 return setOf(data.get(jsonKey).asText())
@@ -171,11 +177,48 @@ public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String)
         return links
     }
 
-    private fun checkError(json: JsonNode?) {
-        json!! // Assert not null
+    protected override fun checkForError(root: JsonNode) {
+        if (!root.get("success").asBoolean(false)) {
+            throw IllegalStateException("Imgur API returned an error: ${root.get("data").get("error").asText()}")
+        }
+    }
+}
 
-        if (!json.get("success").asBoolean(false)) {
-            throw IllegalStateException("Imgur API returned an error: ${json.get("data").get("error").asText()}")
+/**
+ * Represents the list of formats each file on Gfycat is available in
+ */
+public enum class GfycatFormat {
+    /** MP4 video (video/mp4) */
+    MP4
+    /** GIF image (image/gif) */
+    GIF
+    /** WebM video (video/webm) */
+    WEBM
+}
+
+/**
+ * This class will intercept any download request to gfycat.com and try to retrieve the content of the image/video on
+ * that page
+ */
+public class GfycatResourceIdentifier(rest: RestClient) :
+        ApiConsumer,
+        AltDownloadFormats<GfycatFormat>,
+        SimpleRegexResourceIdentifier(RegexUtils.ofUrlGlob(host = "gfycat.com", path = "/*")) {
+
+    override var resourceVersion: GfycatFormat = GfycatFormat.WEBM
+    override val rest: RestClient = rest
+
+    override fun find(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
+        val id = stripQuery(captureGroup(effectiveRegex, url.toExternalForm(), 1))
+        val json = rest.get("https://gfycat.com/cajax/get/$id").json
+        checkForError(json)
+        // Get the desired version of the file
+        return setOf(json.get("gfyItem").get(resourceVersion.name().toLowerCase() + "Url").asText())
+    }
+
+    override fun checkForError(root: JsonNode) {
+        if (root.has("error")) {
+            throw IllegalStateException("Gfycat API returned an error: ${root.get("error")}")
         }
     }
 }
