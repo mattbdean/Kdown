@@ -18,7 +18,8 @@ kdown.download(url, directory, "image/png", "image/jpeg", "image/gif")
 
 ```kotlin
 
-// Just download the file. There's no way to tell when this will be completed or if it actually succeeded
+// Just download the file. There's no way to tell when this will be completed or
+// if it actually succeeded
 kdown.downloadAsync(url, directory)
 
 // Pass function literals that will be called after the file has been downloaded
