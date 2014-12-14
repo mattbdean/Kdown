@@ -14,10 +14,12 @@ import net.dean.kdown.DownloadRequest
 import net.dean.kdown.ImgurResourceIdentifier
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import net.dean.kdown.ImgurGifFormat
 
 public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")
     private val url = "https://i.imgur.com/jxQ3mNq.jpg"
+    private val urlGif = "https://imgur.com/2ZKaO7c"
     private val dir = File("test-downloads")
 
     public test fun directDownload() {
@@ -103,8 +105,16 @@ public class KdownTest {
 
     public test fun imgurImage() {
         dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
-        val actual = dl.download(DownloadRequest("https://imgur.com/2ZKaO7c", dir, "image/gif", "image/webm"))
-        Assert.assertEquals(actual.size(), 1, "Expected and actual download lists were not of the same size")
+        val actual = dl.download(DownloadRequest(urlGif, dir, "image/gif"))
+        assertDownloaded(actual)
+    }
+
+    public test fun imgurGifAltFormats() {
+        val identifier = ImgurResourceIdentifier(dl.rest, getSecret("IMGUR"))
+        identifier.resourceVersion = ImgurGifFormat.WEBM
+
+        dl.identifiers.add(identifier)
+        val actual = dl.download(DownloadRequest(urlGif, dir, "video/webm"))
         assertDownloaded(actual)
     }
 

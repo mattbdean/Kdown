@@ -29,6 +29,13 @@ public trait ResourceIdentifier {
 }
 
 /**
+ * Denotes that this ResourceIdentifier can download different versions of a file
+ */
+public trait AltDownloadFormats<T : Enum<T>> {
+    public var resourceVersion: T
+}
+
+/**
  * This class is an abstraction of [ResourceIdentifier] that will transform a URL if and only it matches a regular
  * expression found in the key set of [regexes]. [regexes] is a Map of regular expressions to a unique identification
  * string for that resource. For example, on regex might match a single image, and another might match an entire
@@ -92,16 +99,32 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
 public abstract class SimpleRegexResourceIdentifier(regex: String) : RegexResourceIdentifier(mapOf(regex to "it"))
 
 /**
+ * Represents the different versions of a image/gif image available to download from imgur
+ */
+public enum class ImgurGifFormat(private val overrideName: String = "") {
+    public val jsonName: String
+        get() = if (overrideName.isEmpty()) name().toLowerCase() else overrideName
+
+    GIF : ImgurGifFormat("link")
+    GIFV: ImgurGifFormat()
+    WEBM: ImgurGifFormat()
+    MP4 : ImgurGifFormat()
+}
+
+/**
  * This class uses the imgur API to retrieve links based on the given resource URL. Links to albums (/a/...), galleries
- * (/gallery/...) and images (/...) are supported.
+ * (/gallery/...) and images (/...) are supported. When downloading GIFs, there are several different file types to
+ * choose from: GIF, GIFV, WEBM, and MP4. This can be changed by modifying the value of [resourceVersion].
  */
 public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String) :
+            AltDownloadFormats<ImgurGifFormat>,
             RegexResourceIdentifier(mapOf(
                     RegexUtils.ofUrlGlob(host = "imgur.com", path = "/a/*") to "album",
                     RegexUtils.ofUrlGlob(host = "imgur.com", path = "/gallery/*") to "gallery",
                     RegexUtils.ofUrl(host = "imgur\\.com", path = "/([a-zA-Z1-9]{6,})") to "image"
             )) {
 
+    public override var resourceVersion: ImgurGifFormat = ImgurGifFormat.GIF
     private val headers = mapOf("Authorization" to "Client-ID $clientId")
 
     override fun transform(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
@@ -125,7 +148,9 @@ public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String)
                 val id = id()
                 val json = rest.get("https://api.imgur.com/3/image/$id", headers = headers).json
                 checkError(json!!)
-                return setOf(json.get("data").get("link").asText())
+                val data = json.get("data")
+                val jsonKey = if (data.has(resourceVersion.jsonName)) resourceVersion.jsonName else "link"
+                return setOf(data.get(jsonKey).asText())
             }
         }
 
@@ -134,8 +159,13 @@ public class ImgurResourceIdentifier(val rest: RestClient, val clientId: String)
 
     private fun parseLinks(imagesNode: JsonNode): Set<String> {
         val links: MutableSet<String> = HashSet()
+        val desiredType = resourceVersion.jsonName
         for (node in imagesNode) {
-            links.add(node.get("link").asText())
+            if (node.has(desiredType)) {
+                links.add(node.get(desiredType).asText())
+            } else {
+                links.add(node.get("link").asText())
+            }
         }
 
         return links
