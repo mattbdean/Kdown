@@ -10,7 +10,6 @@ import org.testng.annotations.Test as test
 import org.testng.annotations.BeforeMethod as beforeMethod
 import net.dean.kdown.Kdown
 import net.dean.kdown.ResourceIdentifier
-import net.dean.kdown.DownloadRequest
 import net.dean.kdown.ImgurResourceIdentifier
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -23,25 +22,25 @@ public class KdownTest {
     private val dir = File("test-downloads")
 
     public test fun directDownload() {
-        assertDownloaded(dl.download(DownloadRequest(url, dir)))
+        assertDownloaded(dl.download(url, dir))
     }
 
     public test fun downloadWithQueryAndFragment() {
-        assertDownloaded(dl.download(DownloadRequest(url + "?foo=bar#test", dir)))
+        assertDownloaded(dl.download(url + "?foo=bar#test", dir))
     }
 
     public test fun downloadWithContentTypes() {
-        assertDownloaded(dl.download(DownloadRequest(url, dir, "image/jpeg", "image/png", "image/gif")))
+        assertDownloaded(dl.download(url, dir, "image/jpeg", "image/png", "image/gif"))
     }
 
     public test(expectedExceptions = array(javaClass<IllegalStateException>())) fun downloadInvalidContentType() {
-        assertDownloaded(dl.download(DownloadRequest(url, dir, "invalid/type")))
+        assertDownloaded(dl.download(url, dir, "invalid/type"))
     }
 
     public test fun downloadWithBasicTransformer() {
         // Note that this is not testing the BasicTransformer class, but rather the ResourceIdentifier trait in general
         dl.identifiers.add(BasicTransformer(url, setOf("https://i.imgur.com/ILyfCJr.gif")))
-        assertDownloaded(dl.download(DownloadRequest(url, dir)))
+        assertDownloaded(dl.download(url, dir))
     }
 
     public test fun downloadUrlMultipleTargets() {
@@ -52,7 +51,7 @@ public class KdownTest {
         )
         dl.identifiers.add(BasicTransformer(url, expected))
 
-        val actual = dl.download(DownloadRequest(url, dir))
+        val actual = dl.download(url, dir)
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
@@ -65,7 +64,7 @@ public class KdownTest {
         )
         dl.identifiers.add(BasicTransformer(url, expected))
 
-        dl.downloadAsync(DownloadRequest(url, dir),
+        dl.downloadAsync(url, dir,
                 success = { assertDownloaded(it) },
                 fail = { (request, exception) -> Assert.fail("Async request to ${request.url()} failed", exception) })
     }
@@ -81,7 +80,7 @@ public class KdownTest {
                 "https://i.imgur.com/l0JtV5D.png"
         )
         dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
-        val actual = dl.download(DownloadRequest("https://imgur.com/a/C1yQx?extraQuery", dir))
+        val actual = dl.download("https://imgur.com/a/C1yQx?extraQuery", dir)
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
@@ -98,14 +97,14 @@ public class KdownTest {
         )
 
         dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
-        val actual = dl.download(DownloadRequest("https://imgur.com/gallery/0rH2B", dir))
+        val actual = dl.download("https://imgur.com/gallery/0rH2B", dir)
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
     public test fun imgurImage() {
         dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
-        val actual = dl.download(DownloadRequest(urlGif, dir, "image/gif"))
+        val actual = dl.download(urlGif, dir, "image/gif")
         assertDownloaded(actual)
     }
 
@@ -114,7 +113,7 @@ public class KdownTest {
         identifier.resourceVersion = ImgurGifFormat.WEBM
 
         dl.identifiers.add(identifier)
-        val actual = dl.download(DownloadRequest(urlGif, dir, "video/webm"))
+        val actual = dl.download(urlGif, dir, "video/webm")
         assertDownloaded(actual)
     }
 

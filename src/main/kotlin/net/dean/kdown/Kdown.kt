@@ -31,9 +31,11 @@ public class Kdown(userAgent: String) {
      * download of a file and on a failure respectively. Note that if a UrlTransformer is used and it creates multiple
      * download targets, [success] and [fail] will be called *for each file*
      */
-    public fun downloadAsync(request: DownloadRequest,
+    public fun downloadAsync(url: String, directory: File, vararg contentTypes: String,
                        success: (file: File) -> Unit = {},
                        fail: (request: Request, e: Exception) -> Unit = {(request, e) -> }) {
+
+        val request = DownloadRequest(url, directory, contentTypes)
         log.info("Enqueuing request to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
@@ -59,7 +61,8 @@ public class Kdown(userAgent: String) {
     }
 
     /** Downloads a resource synchronously and returns the set of files that were downloaded */
-    public fun download(request: DownloadRequest): Set<File> {
+    public fun download(url: String, directory: File, vararg contentTypes: String): Set<File> {
+        val request = DownloadRequest(url, directory, contentTypes)
         log.info("Requested to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
@@ -168,9 +171,9 @@ public class Kdown(userAgent: String) {
  * response's content type is discarded and the file will be downloaded in any case. If a [UrlTransformer] turns this
  * request into multiple files, each file will be checked against the Content-Types.
  */
-public data class DownloadRequest(public val url: String,
+private data class DownloadRequest(public val url: String,
                                   public val directory: File,
-                                  public vararg val contentTypes: String)
+                                  public val contentTypes: Array<String>)
 
 /**
  * Indicates that an HTTP response has returned a code that is not in the range of [200, 300)
