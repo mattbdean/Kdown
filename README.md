@@ -66,6 +66,20 @@ https://i.imgur.com/l0JtV5D.png
 
 Kdown comes built in with several `ResourceIdentifier`s, including the one that describes the process above (`ImgurResourceIdentifier`)
 
+###Using
+
+Add these lines to your Gradle buildscript:
+
+```groovy
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'net.dean.kdown:kdown:0.1.0'
+}
+```
+
 ###Publishing
 To publish a build to Bintray, create a file called `gradle.properties` in this format:
 
