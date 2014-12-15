@@ -27,6 +27,12 @@ dependencies {
     testCompile 'org.testng:testng:6.8.8'
 }
 
+for (prop in ['bintrayUser', 'bintrayKey']) {
+    if (!hasProperty(prop)) {
+        ext[prop] = "no value set in gradle.properties"
+    }
+}
+
 group = "net.dean.kdown"
 version = "0.1.0"
 
@@ -74,6 +80,7 @@ publishing {
     }
 }
 
+println bintrayUser
 bintray {
     apiUrl = "https://api.bintray.com/"
     user = bintrayUser
@@ -81,7 +88,7 @@ bintray {
 
     publications = ['mavenJava']
     dryRun = false
-    publish = false
+    publish = true
     pkg {
         repo = 'maven'
         name = project.name
