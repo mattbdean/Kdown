@@ -80,7 +80,6 @@ publishing {
     }
 }
 
-println bintrayUser
 bintray {
     apiUrl = "https://api.bintray.com/"
     user = bintrayUser
