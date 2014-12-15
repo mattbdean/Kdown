@@ -7,7 +7,11 @@ buildscript {
     }
 }
 
-apply plugin: "kotlin"
+plugins {
+    id "eu.appsatori.fatjar" version "0.3"
+    id "com.jfrog.bintray" version "1.0"
+    id "maven-publish"
+}
 
 repositories {
     mavenCentral()
@@ -23,7 +27,8 @@ dependencies {
     testCompile 'org.testng:testng:6.8.8'
 }
 
-version = '1.0.0'
+group = "net.dean.kdown"
+version = "0.1.0"
 
 task wrapper(type: Wrapper) {
   gradleVersion = '2.2'
@@ -41,3 +46,48 @@ test {
         logger.lifecycle("Running test: ${descriptor.className}.${descriptor.name}")
     }
 }
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+// Add jars to artifacts
+artifacts {
+    archives sourcesJar, javadocJar, fatJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            artifact sourcesJar { classifier "sources" }
+            artifact javadocJar { classifier "javadoc" }
+            artifact fatJar     { classifier "fat"     }
+        }
+    }
+}
+
+bintray {
+    apiUrl = "https://api.bintray.com/"
+    user = bintrayUser
+    key = bintrayKey
+
+    publications = ['mavenJava']
+    dryRun = false
+    publish = false
+    pkg {
+        repo = 'maven'
+        name = project.name
+        desc = 'Downloading files programmatically made easy'
+        licenses = ['MIT']
+        labels = ['kotlin', 'java', 'download', 'api']
+    }
+}
+

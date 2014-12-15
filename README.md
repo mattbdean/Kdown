@@ -1,5 +1,4 @@
-Kdown [![Travis](http://img.shields.io/travis/thatJavaNerd/Kdown.svg?style=flat)](https://travis-ci.org/thatJavaNerd/Kdown)
-=====
+#Kdown [![Travis](http://img.shields.io/travis/thatJavaNerd/Kdown.svg?style=flat)](https://travis-ci.org/thatJavaNerd/Kdown)
 
 Kdown provides a simple but powerful interface to download files both synchronously and asynchronously.
 
@@ -31,7 +30,7 @@ kdown.downloadAsync(DownloadRequest(url, directory),
         })
 ```
 
-### Resources
+###Resources
 Kdown tries to make the concept of downloading files a little more abstract with the concept of a "resource". A resource is a set of one or more files that is derived from a given URL. For example, an imgur album with the URL of [`https://imgur.com/a/C1yQx`](https://imgur.com/a/C1yQx) can be interpreted as either a file (the HTML page) or a resource (the images in the album).
 
 In most cases, when we send a download request to `https://imgur.com/a/C1yQx`, we don't really want to download the file, but rather the resource. To do this, we can add a `ResourceIdentifier` to our `Kdown` object
@@ -66,3 +65,13 @@ https://i.imgur.com/l0JtV5D.png
 ```
 
 Kdown comes built in with several `ResourceIdentifier`s, including the one that describes the process above (`ImgurResourceIdentifier`)
+
+###Publishing
+To publish a build to Bintray, create a file called `gradle.properties` in this format:
+
+```properties
+bintrayUser=<your username>
+bintrayKey=<your API key>
+```
+
+Then run `gradle bintrayUpload`
