@@ -36,7 +36,7 @@ public class Kdown(userAgent: String) {
                        success: (file: File) -> Unit = {},
                        fail: (request: Request, e: Exception) -> Unit = {(request, e) -> }) {
 
-        val request = DownloadRequest(url, directory, contentTypes)
+        val request = DownloadRequest(url, directory, *contentTypes)
         log.info("Enqueuing request to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
@@ -63,7 +63,7 @@ public class Kdown(userAgent: String) {
 
     /** Downloads a resource synchronously and returns the set of files that were downloaded */
     public fun download(url: String, directory: File, vararg contentTypes: String): Set<File> {
-        val request = DownloadRequest(url, directory, contentTypes)
+        val request = DownloadRequest(url, directory, *contentTypes)
         log.info("Requested to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
@@ -121,7 +121,7 @@ public class Kdown(userAgent: String) {
             throw IllegalStateException("No Content-Type header returned")
         }
 
-        if (!checkContentType(responseContentType, request.contentTypes)) {
+        if (!checkContentType(responseContentType, *request.contentTypes)) {
             throw IllegalStateException("No valid content types matched the Content-Type '$responseContentType'")
         }
 
@@ -134,8 +134,6 @@ public class Kdown(userAgent: String) {
             if (request.directory.isFile()) {
                 throw IllegalArgumentException("Download directory already exists as a file: ${request.directory}")
             }
-            val isdir = request.directory.isDirectory()
-            val mkdirs = request.directory.mkdirs()
             if (!request.directory.isDirectory() && !request.directory.mkdirs()) {
                 throw IOException("Could not create directory ${request.directory}")
             }
@@ -184,9 +182,9 @@ public class Kdown(userAgent: String) {
      * Checks if any of the given acceptable Content-Types starts with the given Content-Type. Returns true if
      * [acceptable] is empty
      */
-    private fun checkContentType(given: String, acceptable: Array<String>): Boolean {
-        if (acceptable.size == 0) return true
-        return acceptable.filter { it.startsWith(given) }.size > 0
+    private fun checkContentType(given: String, vararg acceptable: String): Boolean {
+        if (acceptable.size() == 0) return true
+        return acceptable.filter { it.startsWith(given) }.size() > 0
     }
 }
 
@@ -198,7 +196,7 @@ public class Kdown(userAgent: String) {
  */
 private data class DownloadRequest(public val url: String,
                                   public val directory: File,
-                                  public val contentTypes: Array<String>)
+                                  public vararg val contentTypes: String)
 
 /**
  * Indicates that an HTTP response has returned a code that is not in the range of [200, 300)
