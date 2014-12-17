@@ -12,7 +12,6 @@ plugins {
     id "com.jfrog.bintray" version "1.0"
     id "maven-publish"
 }
-
 repositories {
     mavenCentral()
 }
@@ -80,7 +79,8 @@ publishing {
     }
 }
 
-println bintrayUser
+apply plugin: "kotlin"
+
 bintray {
     apiUrl = "https://api.bintray.com/"
     user = bintrayUser

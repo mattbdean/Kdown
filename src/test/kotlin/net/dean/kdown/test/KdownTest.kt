@@ -20,7 +20,7 @@ public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")
     private val url = "https://i.imgur.com/jxQ3mNq.jpg"
     private val urlGif = "https://imgur.com/2ZKaO7c"
-    private val dir = File("test-downloads")
+    private val dir = File("test-downloads/one/two/three");
 
     public test fun directDownload() {
         assertDownloaded(dl.download(url, dir))

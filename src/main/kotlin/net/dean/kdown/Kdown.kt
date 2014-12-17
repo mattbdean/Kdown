@@ -21,6 +21,7 @@ public class Kdown(userAgent: String) {
     public val identifiers: MutableList<ResourceIdentifier> = ArrayList()
     public val http: OkHttpClient = OkHttpClient()
     public val rest: RestClient = RestClient(http, userAgent);
+    public val createDirectories: Boolean = true
 
     {
         defaultHeaders.put("User-Agent", userAgent)
@@ -96,8 +97,19 @@ public class Kdown(userAgent: String) {
         return requestBuilder.build()
     }
 
-    /** Transfers the body of a response (file) to the download request's directory */
-    throws(javaClass<IllegalStateException>())
+    /**
+     * Transfers the body of a response (file) to the download request's directory
+     *
+     * Throws an IllegalStateException if the response header did not include a Content-Type header or if its value was
+     * not in the the request's list of Content-Types.
+     *
+     * Throws a NetworkException if the HTTP request was not successful
+     *
+     * Throws an IOException if [createDirectories] is true and they could not be created
+     */
+    throws(javaClass<IllegalStateException>(),
+            javaClass<NetworkException>(),
+            javaClass<IOException>())
     private fun transferResponse(request: DownloadRequest, response: Response): File {
         if (!response.isSuccessful()) {
             throw NetworkException(response.code())
@@ -117,9 +129,22 @@ public class Kdown(userAgent: String) {
         val fileName = response.request().url().getPath().split('/').last()
         log.info("File name detected as '$fileName'")
 
+        // Create directories
+        if (createDirectories) {
+            if (request.directory.isFile()) {
+                throw IllegalArgumentException("Download directory already exists as a file: ${request.directory}")
+            }
+            val isdir = request.directory.isDirectory()
+            val mkdirs = request.directory.mkdirs()
+            if (!request.directory.isDirectory() && !request.directory.mkdirs()) {
+                throw IOException("Could not create directory ${request.directory}")
+            }
+        }
+
         // Write the response body to the file
         if (!request.directory.isDirectory()) {
-            throw IllegalArgumentException("Download directory does not exist or is not a directory")
+            throw IllegalArgumentException("Download directory is not a directory or does not exist: ${request.directory}" +
+                " (you can automatically create directories by enabling Kdown.createDirectories)")
         }
 
         val input = response.body().byteStream()
