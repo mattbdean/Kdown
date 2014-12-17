@@ -40,7 +40,7 @@ public class Kdown(userAgent: String) {
         log.info("Enqueuing request to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
-        if (targets.size == 0) {
+        if (targets.size() == 0) {
             log.info("No targets found")
             return
         }
@@ -67,7 +67,7 @@ public class Kdown(userAgent: String) {
         log.info("Requested to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
-        if (targets.size == 0) {
+        if (targets.size() == 0) {
             log.info("No targets found")
             return setOf()
         }
@@ -101,13 +101,13 @@ public class Kdown(userAgent: String) {
      * Transfers the body of a response (file) to the download request's directory
      *
      * Throws an IllegalStateException if the response header did not include a Content-Type header or if its value was
-     * not in the the request's list of Content-Types.
-     *
+     *     not in the the request's list of Content-Types.
      * Throws a NetworkException if the HTTP request was not successful
-     *
      * Throws an IOException if [createDirectories] is true and they could not be created
+     * Throws an IllegalArgumentException if the download directory already exists, but as a file
      */
     throws(javaClass<IllegalStateException>(),
+            javaClass<IllegalArgumentException>(),
             javaClass<NetworkException>(),
             javaClass<IOException>())
     private fun transferResponse(request: DownloadRequest, response: Response): File {
