@@ -80,7 +80,7 @@ public class KdownTest {
                 "https://i.imgur.com/Yr0L3hI.png",
                 "https://i.imgur.com/l0JtV5D.png"
         )
-        dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
+        dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download("https://imgur.com/a/C1yQx?extraQuery", dir)
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
@@ -97,20 +97,20 @@ public class KdownTest {
                 "https://i.imgur.com/ZTdBuBl.png"
         )
 
-        dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
+        dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download("https://imgur.com/gallery/0rH2B", dir)
         Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
     public test fun imgurImage() {
-        dl.identifiers.add(ImgurResourceIdentifier(dl.rest, getSecret("IMGUR")))
+        dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download(urlGif, dir, "image/gif")
         assertDownloaded(actual)
     }
 
     public test fun imgurGifAltFormats() {
-        val identifier = ImgurResourceIdentifier(dl.rest, getSecret("IMGUR"))
+        val identifier = ImgurResourceIdentifier(dl, getSecret("IMGUR"))
         identifier.resourceVersion = ImgurGifFormat.WEBM
 
         dl.identifiers.add(identifier)
@@ -119,7 +119,7 @@ public class KdownTest {
     }
 
     public test fun gfycat() {
-        dl.identifiers.add(GfycatResourceIdentifier(dl.rest))
+        dl.identifiers.add(GfycatResourceIdentifier(dl))
         assertDownloaded(dl.download("https://gfycat.com/EagerSillyDogfish", dir, "video/webm"))
     }
 

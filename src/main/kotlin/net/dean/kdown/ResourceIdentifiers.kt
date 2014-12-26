@@ -120,7 +120,7 @@ public enum class ImgurGifFormat(private val overrideName: String = "") {
  * (/gallery/...) and images (/...) are supported. When downloading GIFs, there are several different file types to
  * choose from: GIF, GIFV, WEBM, and MP4. This can be changed by modifying the value of [resourceVersion].
  */
-public class ImgurResourceIdentifier(rest: RestClient, val clientId: String) :
+public class ImgurResourceIdentifier(dl: Kdown, val clientId: String) :
             AltDownloadFormats<ImgurGifFormat>,
             ApiConsumer,
             RegexResourceIdentifier(mapOf(
@@ -128,7 +128,7 @@ public class ImgurResourceIdentifier(rest: RestClient, val clientId: String) :
                     RegexUtils.ofUrlGlob(host = "imgur.com", path = "/gallery/*") to "gallery",
                     RegexUtils.ofUrl(host = "imgur\\.com", path = "/([a-zA-Z1-9]{6,})") to "image"
             )) {
-    override val rest: RestClient = rest
+    override val rest: RestClient = dl.rest
 
     public override var resourceVersion: ImgurGifFormat = ImgurGifFormat.GIF
     /** Whether or not to download galleries and images */
@@ -204,13 +204,13 @@ public enum class GfycatFormat {
  * This class will intercept any download request to gfycat.com and try to retrieve the content of the image/video on
  * that page
  */
-public class GfycatResourceIdentifier(rest: RestClient) :
+public class GfycatResourceIdentifier(dl: Kdown) :
         ApiConsumer,
         AltDownloadFormats<GfycatFormat>,
         SimpleRegexResourceIdentifier(RegexUtils.ofUrlGlob(host = "gfycat.com", path = "/*")) {
 
     override var resourceVersion: GfycatFormat = GfycatFormat.WEBM
-    override val rest: RestClient = rest
+    override val rest: RestClient = dl.rest
 
     override fun find(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
         val id = stripQuery(captureGroup(effectiveRegex, url.toExternalForm(), 1))
