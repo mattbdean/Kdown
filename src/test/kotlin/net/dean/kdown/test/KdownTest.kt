@@ -4,7 +4,7 @@ import kotlin.properties.Delegates
 import java.io.File
 import java.io.InputStream
 import java.net.URL
-import org.testng.Assert
+import org.testng.Assert.*
 import org.testng.annotations.BeforeClass as beforeClass
 import org.testng.annotations.Test as test
 import org.testng.annotations.BeforeMethod as beforeMethod
@@ -40,7 +40,7 @@ public class KdownTest {
 
     public test fun downloadWithBasicTransformer() {
         // Note that this is not testing the BasicTransformer class, but rather the ResourceIdentifier trait in general
-        dl.identifiers.add(BasicTransformer(url, setOf("https://i.imgur.com/ILyfCJr.gif")))
+        dl.identifiers.add(BasicIdentifier(url, setOf("https://i.imgur.com/ILyfCJr.gif")))
         assertDownloaded(dl.download(url, dir))
     }
 
@@ -50,10 +50,10 @@ public class KdownTest {
                 "https://i.imgur.com/FULeSIt.png",
                 "https://i.imgur.com/irzzg2F.png"
         )
-        dl.identifiers.add(BasicTransformer(url, expected))
+        dl.identifiers.add(BasicIdentifier(url, expected))
 
         val actual = dl.download(url, dir)
-        Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
@@ -63,11 +63,11 @@ public class KdownTest {
                 "https://i.imgur.com/FULeSIt.png",
                 "https://i.imgur.com/irzzg2F.png"
         )
-        dl.identifiers.add(BasicTransformer(url, expected))
+        dl.identifiers.add(BasicIdentifier(url, expected))
 
         dl.downloadAsync(url, dir,
                 success = { assertDownloaded(it) },
-                fail = { (request, exception) -> Assert.fail("Async request to ${request.url()} failed", exception) })
+                fail = { (request, exception) -> fail("Async request to ${request.url()} failed", exception) })
     }
 
     public test fun imgurAlbum() {
@@ -82,7 +82,7 @@ public class KdownTest {
         )
         dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download("https://imgur.com/a/C1yQx?extraQuery", dir)
-        Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
@@ -99,7 +99,7 @@ public class KdownTest {
 
         dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download("https://imgur.com/gallery/0rH2B", dir)
-        Assert.assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
@@ -123,6 +123,33 @@ public class KdownTest {
         assertDownloaded(dl.download("https://gfycat.com/EagerSillyDogfish", dir, "video/webm"))
     }
 
+    public test fun downloadAsyncWithCompleteCallback() {
+        val url = "https://imgur.com/abc123"
+        dl.identifiers.add(BasicIdentifier(url, setOf(
+                "https://i.imgur.com/R63Dt47.jpg", // Will complete fine
+                "https://i.imgur.com/rxTnbQs.jpg", // Will complete fine
+                "https://i.imgur.com/failme.jpg"   // Will fail miserably
+        )))
+        val expectedSuccessCount = 2
+        val expectedFailCount = 1
+
+        var successCount = 0
+        var failCount = 0
+        dl.downloadAsync(url, dir, success = {(file) ->
+            successCount++
+        }, fail = {(request, exception) ->
+            failCount++
+        }, complete = {(succeeded, failed) ->
+            // Test the successes
+            assertEquals(successCount, expectedSuccessCount, "Calculated success count did not match the expected success count")
+            assertEquals(succeeded, expectedSuccessCount, "Internally-calculated success count did not match the expected success count")
+
+            // Test the failures
+            assertEquals(failCount, expectedFailCount, "Calculated failure count did not match the expected failure count")
+            assertEquals(failed, expectedFailCount, "Internally-calculated failure count did not match the expected failure count")
+        })
+    }
+
     public beforeClass fun beforeClass() {
         dir.mkdirs()
     }
@@ -138,7 +165,7 @@ public class KdownTest {
     }
 
     private fun assertDownloaded(file: File) {
-        Assert.assertTrue(file.isFile(), "File $file does not exist or is not a file")
+        assertTrue(file.isFile(), "File $file does not exist or is not a file")
         if (!file.delete()) {
             System.err.println("Could not delete ${file.getAbsolutePath()}")
         }
@@ -165,7 +192,7 @@ private fun getSecret(name: String): String {
 /**
  * A transformer that will transform a URL if and only if the given URL is equal to the URL given in the constructor
  */
-private class BasicTransformer(private val url: String, private val result: Set<String>) : ResourceIdentifier {
+private class BasicIdentifier(private val url: String, private val result: Set<String>) : ResourceIdentifier {
     override fun find(url: URL): Set<String> {
         return result
     }

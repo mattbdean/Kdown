@@ -30,11 +30,17 @@ public class Kdown(userAgent: String) {
     /**
      * Downloads a file asynchronously. The two callback functions ([success] and [fail]) are called on the successful
      * download of a file and on a failure respectively. Note that if a UrlTransformer is used and it creates multiple
-     * download targets, [success] and [fail] will be called *for each file*
+     * download targets, [success] and [fail] will be called *for each file*, while [complete] will be called only after
+     * every HTTP request has returned (regardless of success).
      */
     public fun downloadAsync(url: String, directory: File, vararg contentTypes: String,
                        success: (file: File) -> Unit = {},
-                       fail: (request: Request, e: Exception) -> Unit = {(request, e) -> }) {
+                       fail: (request: Request, e: Exception) -> Unit = {(request, e) -> },
+                       complete: (succeeded: Int, failed: Int) -> Unit = {(succeeded, failed) -> }) {
+
+        fun checkCompletion(total: Int, progress: Int, succeeded: Int, failed: Int) {
+            if (total == progress) complete(succeeded, failed)
+        }
 
         val request = DownloadRequest(url, directory, *contentTypes)
         log.info("Enqueuing request to download content from '${request.url}' into '${request.directory}'")
@@ -45,17 +51,28 @@ public class Kdown(userAgent: String) {
             return
         }
 
-        // Add an call for each target
+        var succeededRequests = 0
+        var failedRequests = 0
+        val totalRequests = targets.size()
+        var requestCompleteCount = 0
+
+        // Add a call for each target
         targets.forEach {
             val httpRequest = buildRequest(it)
             http.newCall(httpRequest).enqueue(object: Callback {
-                override fun onFailure(request: Request, e: IOException) { fail(request, e) }
+                override fun onFailure(request: Request, e: IOException) {
+                    failedRequests++
+                    fail(request, e)
+                    checkCompletion(totalRequests, ++requestCompleteCount, succeededRequests, failedRequests)
+                }
                 override fun onResponse(response: Response?) {
+                    succeededRequests++
                     try {
                         success(transferResponse(request, response!!))
                     } catch (e: Exception) {
                         fail(httpRequest, e)
                     }
+                    checkCompletion(totalRequests, ++requestCompleteCount, succeededRequests, failedRequests)
                 }
             })
         }
