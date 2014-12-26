@@ -15,8 +15,8 @@ public object RegexUtils {
      * The question mark ('?') matches any character, so the expression `C:\Users\Me\file?.txt` would match
      * `C:\Users\Me\file1.txt`, `C:\Users\Me\file2.txt`, and so on.
      *
-     * Any asterisks are replaced with `(.*), which is a capturing group that matches any character. The values
-     * captured inside these can be found later by Matcher.group(int), or by
+     * Any asterisks are replaced with `(.*)`, which is a capturing group that matches any number of characters. The
+     * values captured inside these can be found later by Matcher.group(int), or by
      * RegexResourceIdentifier.captureGroup(String, CharSequence, Int). Question marks are replaced by `(?)` and
      * their values can be accessed in the same way.
      *

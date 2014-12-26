@@ -131,6 +131,8 @@ public class ImgurResourceIdentifier(rest: RestClient, val clientId: String) :
     override val rest: RestClient = rest
 
     public override var resourceVersion: ImgurGifFormat = ImgurGifFormat.GIF
+    /** Whether or not to download galleries and images */
+    public var downloadMultiple: Boolean = true
     private val headers = mapOf("Authorization" to "Client-ID $clientId")
 
     override fun find(url: URL, resourceType: String, effectiveRegex: String): Set<String> {
@@ -139,12 +141,14 @@ public class ImgurResourceIdentifier(rest: RestClient, val clientId: String) :
 
         when (resourceType) {
             "album" -> {
+                if (!downloadMultiple) return setOf()
                 val album = id()
                 // The capture group might have caught some query args or fragments
                 val json = rest.get("https://api.imgur.com/3/album/$album/images", headers = headers).json
                 return parseLinks(json.get("data"))
             }
             "gallery" -> {
+                if (!downloadMultiple) return setOf()
                 val galleryAlbum = id()
                 val json = rest.get("https://api.imgur.com/3/gallery/album/$galleryAlbum", headers = headers).json
                 checkForError(json)
