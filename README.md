@@ -76,7 +76,7 @@ repositories {
 }
 
 dependencies {
-    compile 'net.dean.kdown:kdown:0.1.0'
+    compile 'net.dean.kdown:kdown:0.2.0'
 }
 ```
 
