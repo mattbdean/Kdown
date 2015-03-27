@@ -1,7 +1,6 @@
 package net.dean.kdown
 
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URL
 import java.util.ArrayList
@@ -13,6 +12,7 @@ import com.squareup.okhttp.Request
 import com.squareup.okhttp.Response
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.FileOutputStream
 
 public class Kdown(userAgent: String) {
     /** Headers that will be sent with every request */
@@ -21,28 +21,26 @@ public class Kdown(userAgent: String) {
     public val identifiers: MutableList<ResourceIdentifier> = ArrayList()
     public val http: OkHttpClient = OkHttpClient()
     public val rest: RestClient = RestClient(http, userAgent);
-    public val createDirectories: Boolean = true
+    public var createDirectories: Boolean = true
+    public var bufferSize: Int = 4096
 
-    {
+    init {
         defaultHeaders.put("User-Agent", userAgent)
     }
 
-    /**
-     * Downloads a file asynchronously. The two callback functions ([success] and [fail]) are called on the successful
-     * download of a file and on a failure respectively. Note that if a UrlTransformer is used and it creates multiple
-     * download targets, [success] and [fail] will be called *for each file*, while [complete] will be called only after
-     * every HTTP request has returned (regardless of success).
-     */
-    public fun downloadAsync(url: String, directory: File, vararg contentTypes: String,
-                       success: (file: File) -> Unit = {},
-                       fail: (request: Request, e: Exception) -> Unit = {(request, e) -> },
-                       complete: (succeeded: Int, failed: Int) -> Unit = {(succeeded, failed) -> }) {
+    /** Downloads a resource asynchronously. If [contentTypes] is empty, then any Content-Type will be accepted. */
+    public fun downloadAsync(url: String, directory: File, contentTypes: Set<String>,
+                             tracker: ProgressTracker = ProgressTrackerAdapter()) {
 
-        fun checkCompletion(total: Int, progress: Int, succeeded: Int, failed: Int) {
-            if (total == progress) complete(succeeded, failed)
+        val succeeded: MutableList<URL> = ArrayList()
+        val failed: MutableList<URL> = ArrayList()
+
+        fun checkCompletion(succeeded: List<URL>, failed: List<URL>, expectedTotal: Int) {
+            if (expectedTotal == succeeded.size() + failed.size())
+                tracker.resourceComplete(succeeded, failed)
         }
 
-        val request = DownloadRequest(url, directory, *contentTypes)
+        val request = DownloadRequest(URL(url), directory, contentTypes)
         log.info("Enqueuing request to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
@@ -51,36 +49,32 @@ public class Kdown(userAgent: String) {
             return
         }
 
-        var succeededRequests = 0
-        var failedRequests = 0
-        val totalRequests = targets.size()
-        var requestCompleteCount = 0
-
         // Add a call for each target
-        targets.forEach {
-            val httpRequest = buildRequest(it)
+        targets.forEach { url ->
+            val httpRequest = buildRequest(url)
             http.newCall(httpRequest).enqueue(object: Callback {
-                override fun onFailure(request: Request, e: IOException) {
-                    failedRequests++
-                    fail(request, e)
-                    checkCompletion(totalRequests, ++requestCompleteCount, succeededRequests, failedRequests)
-                }
-                override fun onResponse(response: Response?) {
-                    succeededRequests++
+                override fun onResponse(response: Response) {
                     try {
-                        success(transferResponse(request, response!!))
-                    } catch (e: Exception) {
-                        fail(httpRequest, e)
+                        // Transfer the file from memory to the file system
+                        val newFile = transferResponse(request, response, tracker)
+                        tracker.fileComplete(url, newFile)
+                        succeeded.add(url)
+                        checkCompletion(succeeded, failed, targets.size())
+                    } catch (e: IOException) {
+                        tracker.fileFailed(url, e)
                     }
-                    checkCompletion(totalRequests, ++requestCompleteCount, succeededRequests, failedRequests)
+                }
+                override fun onFailure(request: Request, e: IOException) {
+                    failed.add(url)
+                    tracker.fileFailed(url, e)
                 }
             })
         }
     }
 
     /** Downloads a resource synchronously and returns the set of files that were downloaded */
-    public fun download(url: String, directory: File, vararg contentTypes: String): Set<File> {
-        val request = DownloadRequest(url, directory, *contentTypes)
+    public fun download(url: String, directory: File, contentTypes: Set<String> = setOf(), tracker: ProgressTracker = ProgressTrackerAdapter()): Set<File> {
+        val request = DownloadRequest(URL(url), directory, contentTypes)
         log.info("Requested to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
@@ -94,14 +88,14 @@ public class Kdown(userAgent: String) {
         targets.forEach {
             val httpRequest = buildRequest(it)
             val response = http.newCall(httpRequest).execute()
-            downloads.add(transferResponse(request, response))
+            downloads.add(transferResponse(request, response, tracker))
         }
 
         return downloads
     }
 
     /** Builds a GET request to the given URL and adds the default headers */
-    private fun buildRequest(url: String): Request {
+    private fun buildRequest(url: URL): Request {
         val requestBuilder = Request.Builder()
                 .get()
                 .url(url)
@@ -117,17 +111,17 @@ public class Kdown(userAgent: String) {
     /**
      * Transfers the body of a response (file) to the download request's directory
      *
-     * Throws an IllegalStateException if the response header did not include a Content-Type header or if its value was
+     * @throws IllegalStateException If the response header did not include a Content-Type header or if its value was
      *     not in the the request's list of Content-Types.
-     * Throws a NetworkException if the HTTP request was not successful
-     * Throws an IOException if [createDirectories] is true and they could not be created
-     * Throws an IllegalArgumentException if the download directory already exists, but as a file
+     * @throws NetworkException If the HTTP request was not successful
+     * @throws IOException If [createDirectories] is true and they could not be created
+     * @throws IllegalArgumentException If the download directory already exists, but as a file
      */
     throws(javaClass<IllegalStateException>(),
             javaClass<IllegalArgumentException>(),
             javaClass<NetworkException>(),
             javaClass<IOException>())
-    private fun transferResponse(request: DownloadRequest, response: Response): File {
+    private fun transferResponse(request: DownloadRequest, response: Response, tracker: ProgressTracker): File {
         if (!response.isSuccessful()) {
             throw NetworkException(response.code())
         }
@@ -138,7 +132,7 @@ public class Kdown(userAgent: String) {
             throw IllegalStateException("No Content-Type header returned")
         }
 
-        if (!checkContentType(responseContentType, *request.contentTypes)) {
+        if (!checkContentType(responseContentType, request.contentTypes)) {
             throw IllegalStateException("No valid content types matched the Content-Type '$responseContentType'")
         }
 
@@ -156,22 +150,31 @@ public class Kdown(userAgent: String) {
             }
         }
 
-        // Write the response body to the file
-        if (!request.directory.isDirectory()) {
-            throw IllegalArgumentException("Download directory is not a directory or does not exist: ${request.directory}" +
-                " (you can automatically create directories by enabling Kdown.createDirectories)")
+        val contentLength = response.header("Content-Length")
+        val totalLength: Long
+
+        try {
+            totalLength = contentLength.toLong()
+        } catch (e: NumberFormatException) {
+            throw IllegalStateException("Could not parse Content-Length header (value was '$contentLength')")
         }
 
-        val input = response.body().byteStream()
+        // Write the response body to the file
+        if (!request.directory.isDirectory()) {
+            throw IllegalArgumentException("Download directory is not a directory or does not exist: ${request.directory}")
+        }
+
+        val input = response.body().source()
         val location = File(request.directory, fileName)
         val out = FileOutputStream(location)
-        val buffer = ByteArray(4096)
+        val buffer = ByteArray(bufferSize)
         var len: Int
-        while (true) {
+        var writtenBytes: Long = 0
+        while (!input.exhausted()) {
             len = input.read(buffer)
-            if (len == -1)
-                break
+            writtenBytes += len
             out.write(buffer, 0, len)
+            tracker.fileProgressed(response.request().url(), location, writtenBytes, totalLength, writtenBytes.toDouble() / totalLength)
         }
 
         input.close()
@@ -180,15 +183,14 @@ public class Kdown(userAgent: String) {
         return location
     }
 
-    /** Finds the first transform that can transform the given URL and returns the new URL(s) */
-    private fun findDownloadTargets(url: String): Set<String> {
+    /** Finds the first transformer that can transform the given URL and returns the new URL(s) */
+    private fun findDownloadTargets(url: URL): Set<URL> {
         log.debug("Trying to resolve URL '$url'")
         for (identifier in identifiers) {
-            val u = URL(url)
-            if (identifier.canFind(u)) {
-                val resolved = identifier.find(u)
+            if (identifier.canFind(url)) {
+                val resolved = identifier.find(url)
                 log.debug("Resolved '$url' to '$resolved'")
-                return resolved
+                return resolved.map { URL(it) }.toSet()
             }
         }
 
@@ -199,7 +201,7 @@ public class Kdown(userAgent: String) {
      * Checks if any of the given acceptable Content-Types starts with the given Content-Type. Returns true if
      * [acceptable] is empty
      */
-    private fun checkContentType(given: String, vararg acceptable: String): Boolean {
+    private fun checkContentType(given: String, acceptable: Set<String>): Boolean {
         if (acceptable.size() == 0) return true
         return acceptable.filter { it.startsWith(given) }.size() > 0
     }
@@ -208,17 +210,34 @@ public class Kdown(userAgent: String) {
 /**
  * Provides a combination of variables used to make a download, including the URL to request, the directory to save the
  * file to, and the Content-Types that will be acceptable for the HTTP response. If no Content-Types are given, the
- * response's content type is discarded and the file will be downloaded in any case. If a [UrlTransformer] turns this
- * request into multiple files, each file will be checked against the Content-Types.
+ * response's content type is discarded and the file will be downloaded in any case. If a [ResourceIdentifier] turns
+ * this request into multiple files, each file will be checked against the Content-Types.
  */
-private data class DownloadRequest(public val url: String,
-                                  public val directory: File,
-                                  public vararg val contentTypes: String)
+private data class DownloadRequest(public val url: URL,
+                                   public val directory: File,
+                                   public val contentTypes: Set<String>)
 
-/**
- * Indicates that an HTTP response has returned a code that is not in the range of [200, 300)
- */
-public class NetworkException(public val code: Int): Exception("Request returned unsuccessul response: $code")
+public trait ProgressTracker {
+    /** Called when a single file has failed to download. */
+    public fun fileFailed(source: URL, cause: Exception)
+    /** Called after some part of the file has been downloaded. */
+    public fun fileProgressed(source: URL, location: File, currentBytes: Long, totalBytes: Long, percentage: Double)
+    /** Called when a single file has been successfully downloaded. */
+    public fun fileComplete(source: URL, location: File)
+    /** Called when all the files in a resource have been downloaded. */
+    public fun resourceComplete(succeeded: List<URL>, failed: List<URL>)
+}
 
-val log: Logger = LoggerFactory.getLogger(javaClass<Kdown>().getSimpleName())
+/** Simple implementation of ProgressTracker whose methods do nothing. */
+public open class ProgressTrackerAdapter : ProgressTracker {
+    override fun fileFailed(source: URL, cause: Exception) {}
+    override fun fileProgressed(source: URL, location: File, currentBytes: Long, totalBytes: Long, percentage: Double) {}
+    override fun fileComplete(source: URL, location: File) {}
+    override fun resourceComplete(succeeded: List<URL>, failed: List<URL>) {}
+}
+
+/** Indicates that an HTTP response has returned a code that is not in the range of [200, 300) */
+public class NetworkException(public val code: Int): RuntimeException("Request returned unsuccessful response: $code")
+
+val log: Logger = LoggerFactory.getLogger("Kdown")
 

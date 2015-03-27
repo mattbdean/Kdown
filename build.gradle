@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:0.10.4' // M10
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:0.11.91' // M11
     }
 }
 
@@ -17,13 +17,13 @@ repositories {
 }
 
 dependencies {
-    compile 'org.jetbrains.kotlin:kotlin-stdlib:0.10.4' // Kotlin M10
-    compile 'com.squareup.okhttp:okhttp:2.1.0'
+    compile 'org.jetbrains.kotlin:kotlin-stdlib:0.11.91' // Kotlin M11
+    compile 'com.squareup.okhttp:okhttp:2.2.0'
     compile 'org.slf4j:slf4j-api:1.7.7'
-    compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.13'
-    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.4.3'
-    testCompile 'org.slf4j:slf4j-simple:1.7.7'
-    testCompile 'org.testng:testng:6.8.8'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.5.1'
+    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.5.1.1.KotlinM11'
+    testCompile 'org.slf4j:slf4j-simple:1.7.10'
+    testCompile 'org.testng:testng:6.8.21'
 }
 
 for (prop in ['bintrayUser', 'bintrayKey']) {
@@ -36,8 +36,8 @@ group = "net.dean.kdown"
 version = "0.2.0"
 
 task wrapper(type: Wrapper) {
-  gradleVersion = '2.2'
-  distributionUrl = 'http://services.gradle.org/distributions/gradle-2.2-all.zip'
+  gradleVersion = '2.3'
+  distributionUrl = 'http://services.gradle.org/distributions/gradle-2.3-all.zip'
 }
 
 test {

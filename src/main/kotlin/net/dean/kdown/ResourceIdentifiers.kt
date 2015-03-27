@@ -99,7 +99,7 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
 public abstract class SimpleRegexResourceIdentifier(regex: String) : RegexResourceIdentifier(mapOf(regex to "it"))
 
 /**
- * Represents the different versions of a image/gif image available to download from imgur
+ * Represents the different versions of a image/gif image available to download from Imgur
  */
 public enum class ImgurGifFormat(private val overrideName: String = "") {
     public val jsonName: String
@@ -149,14 +149,12 @@ public class ImgurResourceIdentifier(dl: Kdown, val clientId: String) :
             }
             "gallery" -> {
                 if (!downloadMultiple) return setOf()
-                val galleryAlbum = id()
-                val json = rest.get("https://api.imgur.com/3/gallery/album/$galleryAlbum", headers = headers).json
+                val json = rest.get("https://api.imgur.com/3/gallery/album/${id()}", headers = headers).json
                 checkForError(json)
                 return parseLinks(json.get("data").get("images"))
             }
             "image" -> {
-                val id = id()
-                val json = rest.get("https://api.imgur.com/3/image/$id", headers = headers).json
+                val json = rest.get("https://api.imgur.com/3/image/${id()}", headers = headers).json
                 checkForError(json)
                 val data = json.get("data")
                 val jsonKey = if (data.has(resourceVersion.jsonName)) resourceVersion.jsonName else "link"

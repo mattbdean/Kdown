@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.dean.kdown.ImgurGifFormat
 import net.dean.kdown.GfycatResourceIdentifier
+import net.dean.kdown.ProgressTrackerAdapter
 
 public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")
@@ -31,11 +32,11 @@ public class KdownTest {
     }
 
     public test fun downloadWithContentTypes() {
-        assertDownloaded(dl.download(url, dir, "image/jpeg", "image/png", "image/gif"))
+        assertDownloaded(dl.download(url, dir, setOf("image/jpeg", "image/png", "image/gif")))
     }
 
     public test(expectedExceptions = array(javaClass<IllegalStateException>())) fun downloadInvalidContentType() {
-        assertDownloaded(dl.download(url, dir, "invalid/type"))
+        assertDownloaded(dl.download(url, dir, setOf("invalid/type")))
     }
 
     public test fun downloadWithBasicTransformer() {
@@ -65,9 +66,15 @@ public class KdownTest {
         )
         dl.identifiers.add(BasicIdentifier(url, expected))
 
-        dl.downloadAsync(url, dir,
-                success = { assertDownloaded(it) },
-                fail = { (request, exception) -> fail("Async request to ${request.url()} failed", exception) })
+        dl.downloadAsync(url, dir, setOf(), object: ProgressTrackerAdapter() {
+            override fun fileFailed(source: URL, cause: Exception) {
+                fail("Async request to ${source} failed", cause)
+            }
+
+            override fun fileComplete(source: URL, location: File) {
+                assertDownloaded(location)
+            }
+        })
     }
 
     public test fun imgurAlbum() {
@@ -105,7 +112,7 @@ public class KdownTest {
 
     public test fun imgurImage() {
         dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
-        val actual = dl.download(urlGif, dir, "image/gif")
+        val actual = dl.download(urlGif, dir, setOf("image/gif"))
         assertDownloaded(actual)
     }
 
@@ -114,13 +121,13 @@ public class KdownTest {
         identifier.resourceVersion = ImgurGifFormat.WEBM
 
         dl.identifiers.add(identifier)
-        val actual = dl.download(urlGif, dir, "video/webm")
+        val actual = dl.download(urlGif, dir, setOf("video/webm"))
         assertDownloaded(actual)
     }
 
     public test fun gfycat() {
         dl.identifiers.add(GfycatResourceIdentifier(dl))
-        assertDownloaded(dl.download("https://gfycat.com/EagerSillyDogfish", dir, "video/webm"))
+        assertDownloaded(dl.download("https://gfycat.com/EagerSillyDogfish", dir, setOf("video/webm")))
     }
 
     public test fun downloadAsyncWithCompleteCallback() {
@@ -135,18 +142,24 @@ public class KdownTest {
 
         var successCount = 0
         var failCount = 0
-        dl.downloadAsync(url, dir, success = {(file) ->
-            successCount++
-        }, fail = {(request, exception) ->
-            failCount++
-        }, complete = {(succeeded, failed) ->
-            // Test the successes
-            assertEquals(successCount, expectedSuccessCount, "Calculated success count did not match the expected success count")
-            assertEquals(succeeded, expectedSuccessCount, "Internally-calculated success count did not match the expected success count")
+        dl.downloadAsync(url, dir, contentTypes = setOf(), tracker = object: ProgressTrackerAdapter() {
+            override fun fileFailed(source: URL, cause: Exception) {
+                failCount++
+            }
 
-            // Test the failures
-            assertEquals(failCount, expectedFailCount, "Calculated failure count did not match the expected failure count")
-            assertEquals(failed, expectedFailCount, "Internally-calculated failure count did not match the expected failure count")
+            override fun fileComplete(source: URL, location: File) {
+                successCount++
+            }
+
+            override fun resourceComplete(succeeded: List<URL>, failed: List<URL>) {
+                // Test the successes
+                assertEquals(successCount, expectedSuccessCount, "Calculated success count did not match the expected success count")
+                assertEquals(succeeded, expectedSuccessCount, "Internally-calculated success count did not match the expected success count")
+
+                // Test the failures
+                assertEquals(failCount, expectedFailCount, "Calculated failure count did not match the expected failure count")
+                assertEquals(failed, expectedFailCount, "Internally-calculated failure count did not match the expected failure count")
+            }
         })
     }
 

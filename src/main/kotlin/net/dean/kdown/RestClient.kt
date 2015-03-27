@@ -43,7 +43,7 @@ public data class RestResponse(response: Response) {
     /** The Content-Type returned from the response */
     public val type: MediaType
 
-    {
+    init {
         this.headers = response.headers();
         this.raw = response.body().string()
         this.type = MediaType.parse(response.header("Content-Type"));
