@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:0.11.91' // M11
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.0.0-beta-4584' // Beta 4
     }
 }
 
@@ -17,13 +17,13 @@ repositories {
 }
 
 dependencies {
-    compile 'org.jetbrains.kotlin:kotlin-stdlib:0.11.91' // Kotlin M11
-    compile 'com.squareup.okhttp:okhttp:2.2.0'
+    compile 'org.jetbrains.kotlin:kotlin-stdlib:1.0.0-beta-4584' // Kotlin Beta 4
+    compile 'com.squareup.okhttp:okhttp:2.7.0'
     compile 'org.slf4j:slf4j-api:1.7.7'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.5.1'
-    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.5.1.1.KotlinM11'
-    testCompile 'org.slf4j:slf4j-simple:1.7.10'
-    testCompile 'org.testng:testng:6.8.21'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.6.4'
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.6.4"
+    testCompile 'org.slf4j:slf4j-simple:1.7.13'
+    testCompile 'org.testng:testng:6.9.10'
 }
 
 for (prop in ['bintrayUser', 'bintrayKey']) {

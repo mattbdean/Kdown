@@ -1,21 +1,17 @@
 package net.dean.kdown.test
 
-import kotlin.properties.Delegates
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import net.dean.kdown.*
+import org.testng.Assert.*
+import org.testng.annotations.BeforeClass
+import org.testng.annotations.BeforeMethod
+import org.testng.annotations.Test
 import java.io.File
 import java.io.InputStream
 import java.net.URL
-import org.testng.Assert.*
-import org.testng.annotations.BeforeClass as beforeClass
-import org.testng.annotations.Test as test
-import org.testng.annotations.BeforeMethod as beforeMethod
-import net.dean.kdown.Kdown
-import net.dean.kdown.ResourceIdentifier
-import net.dean.kdown.ImgurResourceIdentifier
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import net.dean.kdown.ImgurGifFormat
-import net.dean.kdown.GfycatResourceIdentifier
-import net.dean.kdown.ProgressTrackerAdapter
+import kotlin.collections.forEach
+import kotlin.collections.setOf
 
 public class KdownTest {
     private val dl = Kdown("KdownTest by github.com/thatJavaNerd")
@@ -23,29 +19,29 @@ public class KdownTest {
     private val urlGif = "https://imgur.com/2ZKaO7c"
     private val dir = File("test-downloads/one/two/three");
 
-    public test fun directDownload() {
+    public @Test fun directDownload() {
         assertDownloaded(dl.download(url, dir))
     }
 
-    public test fun downloadWithQueryAndFragment() {
+    public @Test fun downloadWithQueryAndFragment() {
         assertDownloaded(dl.download(url + "?foo=bar#test", dir))
     }
 
-    public test fun downloadWithContentTypes() {
+    public @Test fun downloadWithContentTypes() {
         assertDownloaded(dl.download(url, dir, setOf("image/jpeg", "image/png", "image/gif")))
     }
 
-    public test(expectedExceptions = array(javaClass<IllegalStateException>())) fun downloadInvalidContentType() {
+    public @Test(expectedExceptions = arrayOf(IllegalStateException::class)) fun downloadInvalidContentType() {
         assertDownloaded(dl.download(url, dir, setOf("invalid/type")))
     }
 
-    public test fun downloadWithBasicTransformer() {
+    public @Test fun downloadWithBasicTransformer() {
         // Note that this is not testing the BasicTransformer class, but rather the ResourceIdentifier trait in general
         dl.identifiers.add(BasicIdentifier(url, setOf("https://i.imgur.com/ILyfCJr.gif")))
         assertDownloaded(dl.download(url, dir))
     }
 
-    public test fun downloadUrlMultipleTargets() {
+    public @Test fun downloadUrlMultipleTargets() {
         val expected = setOf(
                 "https://i.imgur.com/R0aLTh9.png",
                 "https://i.imgur.com/FULeSIt.png",
@@ -54,11 +50,11 @@ public class KdownTest {
         dl.identifiers.add(BasicIdentifier(url, expected))
 
         val actual = dl.download(url, dir)
-        assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertEquals(actual.size, expected.size, "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
-    public test fun downloadAsync() {
+    public @Test fun downloadAsync() {
         val expected = setOf(
                 "https://i.imgur.com/R0aLTh9.png",
                 "https://i.imgur.com/FULeSIt.png",
@@ -68,7 +64,7 @@ public class KdownTest {
 
         dl.downloadAsync(url, dir, setOf(), object: ProgressTrackerAdapter() {
             override fun fileFailed(source: URL, cause: Exception) {
-                fail("Async request to ${source} failed", cause)
+                fail("Async request to $source failed", cause)
             }
 
             override fun fileComplete(source: URL, location: File) {
@@ -77,7 +73,7 @@ public class KdownTest {
         })
     }
 
-    public test fun imgurAlbum() {
+    public @Test fun imgurAlbum() {
         val expected = setOf(
                 "https://i.imgur.com/ExsgFVf.png",
                 "https://i.imgur.com/Otd8M6k.png",
@@ -89,11 +85,11 @@ public class KdownTest {
         )
         dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download("https://imgur.com/a/C1yQx?extraQuery", dir)
-        assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertEquals(actual.size, expected.size, "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
-    public test fun imgurGallery() {
+    public @Test fun imgurGallery() {
         val expected = setOf(
                 "https://i.imgur.com/KZRfzgE.png",
                 "https://i.imgur.com/awMcACA.png",
@@ -106,17 +102,17 @@ public class KdownTest {
 
         dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download("https://imgur.com/gallery/0rH2B", dir)
-        assertEquals(actual.size(), expected.size(), "Expected and actual download lists were not of the same size")
+        assertEquals(actual.size, expected.size, "Expected and actual download lists were not of the same size")
         assertDownloaded(actual)
     }
 
-    public test fun imgurImage() {
+    public @Test fun imgurImage() {
         dl.identifiers.add(ImgurResourceIdentifier(dl, getSecret("IMGUR")))
         val actual = dl.download(urlGif, dir, setOf("image/gif"))
         assertDownloaded(actual)
     }
 
-    public test fun imgurGifAltFormats() {
+    public @Test fun imgurGifAltFormats() {
         val identifier = ImgurResourceIdentifier(dl, getSecret("IMGUR"))
         identifier.resourceVersion = ImgurGifFormat.WEBM
 
@@ -125,12 +121,12 @@ public class KdownTest {
         assertDownloaded(actual)
     }
 
-    public test fun gfycat() {
+    public @Test fun gfycat() {
         dl.identifiers.add(GfycatResourceIdentifier(dl))
         assertDownloaded(dl.download("https://gfycat.com/EagerSillyDogfish", dir, setOf("video/webm")))
     }
 
-    public test fun downloadAsyncWithCompleteCallback() {
+    public @Test fun downloadAsyncWithCompleteCallback() {
         val url = "https://imgur.com/abc123"
         dl.identifiers.add(BasicIdentifier(url, setOf(
                 "https://i.imgur.com/R63Dt47.jpg", // Will complete fine
@@ -163,11 +159,11 @@ public class KdownTest {
         })
     }
 
-    public beforeClass fun beforeClass() {
+    public @BeforeClass fun beforeClass() {
         dir.mkdirs()
     }
 
-    public beforeMethod fun beforeTest() {
+    public @BeforeMethod fun beforeTest() {
         dl.identifiers.clear()
     }
 
@@ -178,17 +174,16 @@ public class KdownTest {
     }
 
     private fun assertDownloaded(file: File) {
-        assertTrue(file.isFile(), "File $file does not exist or is not a file")
+        assertTrue(file.isFile, "File $file does not exist or is not a file")
         if (!file.delete()) {
-            System.err.println("Could not delete ${file.getAbsolutePath()}")
+            System.err.println("Could not delete ${file.absolutePath}")
         }
     }
 }
 
-private val secrets: JsonNode by Delegates.lazy {
-    val input: InputStream? = javaClass<KdownTest>().getResourceAsStream("/secrets.json")
-    if (input == null)
-        throw IllegalStateException("Please create the file src/test/resources/secrets.json")
+private val secrets: JsonNode by lazy {
+    val input: InputStream? = KdownTest::class.java.getResourceAsStream("/secrets.json")
+            ?: throw IllegalStateException("Please create the file src/test/resources/secrets.json")
     jacksonObjectMapper().readTree(input)
 }
 

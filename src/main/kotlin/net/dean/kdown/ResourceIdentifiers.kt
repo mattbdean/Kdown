@@ -1,9 +1,12 @@
 package net.dean.kdown
 
-import java.net.URL
-import java.util.regex.Pattern
-import java.util.HashSet
 import com.fasterxml.jackson.databind.JsonNode
+import java.net.URL
+import java.util.*
+import java.util.regex.Pattern
+import kotlin.collections.mapOf
+import kotlin.collections.setOf
+import kotlin.text.*
 
 /**
  * The ResourceIdentifier trait is used to change one URL into one or many other URLs. A sample use case would be if an
@@ -13,7 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode
  * This pattern allows for the downloading of "resources", not just files, where a resource can consist of one or more
  * file.
  */
-public trait ResourceIdentifier {
+public interface ResourceIdentifier {
     /**
      * Tests if this ResourceIdentifier will operate on the given URL. If true, then [find] will be called directly
      * after.
@@ -31,7 +34,7 @@ public trait ResourceIdentifier {
 /**
  * Denotes that this ResourceIdentifier can download different versions of a file
  */
-public trait AltDownloadFormats<T : Enum<T>> {
+public interface AltDownloadFormats<T : Enum<T>> {
     public var resourceVersion: T
 }
 
@@ -46,8 +49,8 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
     override fun canFind(url: URL): Boolean {
         val urlString = url.toExternalForm()
 
-        for (regex in regexes.keySet()) {
-            if (urlString.matches(regex)) return true
+        for (regex in regexes.keys) {
+            if (urlString.matches(Regex(regex))) return true
         }
         return false
     }
@@ -55,8 +58,10 @@ public abstract class RegexResourceIdentifier(public val regexes: Map<String, St
     override fun find(url: URL): Set<String> {
         val urlString = url.toExternalForm()
 
-        for ((regex, resourceType) in regexes) {
-            if (urlString.matches(regex)) {
+        for (it in regexes.entries) {
+            val regex = it.key
+            val resourceType = it.value
+            if (urlString.matches(Regex(regex))) {
                 return find(url, resourceType, regex)
             }
         }
@@ -102,17 +107,18 @@ public abstract class SimpleRegexResourceIdentifier(regex: String) : RegexResour
  * Represents the different versions of a image/gif image available to download from Imgur
  */
 public enum class ImgurGifFormat(private val overrideName: String = "") {
-    public val jsonName: String
-        get() = if (overrideName.isEmpty()) name().toLowerCase() else overrideName
 
     /** GIF image (image/gif) */
-    GIF : ImgurGifFormat("link")
+    GIF("link"),
     /** Imgur's GIFV format (video/webm) */
-    GIFV: ImgurGifFormat()
+    GIFV(),
     /** WebM (video/webm) */
-    WEBM: ImgurGifFormat()
+    WEBM(),
     /** MP4 video (video/mp4) */
-    MP4 : ImgurGifFormat()
+    MP4();
+
+    public val jsonName: String
+        get() = if (overrideName.isEmpty()) name.toLowerCase() else overrideName
 }
 
 /**
@@ -179,7 +185,7 @@ public class ImgurResourceIdentifier(dl: Kdown, val clientId: String) :
         return links
     }
 
-    protected override fun checkForError(root: JsonNode) {
+    override fun checkForError(root: JsonNode) {
         if (!root.get("success").asBoolean(false)) {
             throw IllegalStateException("Imgur API returned an error: ${root.get("data").get("error").asText()}")
         }
@@ -191,9 +197,9 @@ public class ImgurResourceIdentifier(dl: Kdown, val clientId: String) :
  */
 public enum class GfycatFormat {
     /** MP4 video (video/mp4) */
-    MP4
+    MP4,
     /** GIF image (image/gif) */
-    GIF
+    GIF,
     /** WebM video (video/webm) */
     WEBM
 }

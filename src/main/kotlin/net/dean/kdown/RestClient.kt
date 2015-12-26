@@ -1,13 +1,12 @@
 package net.dean.kdown
 
-import com.squareup.okhttp.Headers;
-import com.squareup.okhttp.MediaType;
-import com.squareup.okhttp.Response;
-import com.squareup.okhttp.Request
-import com.squareup.okhttp.OkHttpClient
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.squareup.okhttp.*
+import kotlin.collections.mapOf
+import kotlin.text.isEmpty
+import kotlin.text.startsWith
 
 /**
  * This class enables the retrieval of resources that must interact with a RESTful JSON API
@@ -17,8 +16,8 @@ public class RestClient(private val http: OkHttpClient, public val userAgent: St
         val request = Request.Builder()
                 .get()
                 .url(url)
-        for ((key, value) in headers) {
-            request.addHeader(key, value)
+        for (elem in headers.entries) {
+            request.addHeader(elem.key, elem.value)
         }
         request.addHeader("User-Agent", userAgent)
 
@@ -33,7 +32,7 @@ public class RestClient(private val http: OkHttpClient, public val userAgent: St
 private val objectMapper: ObjectMapper = jacksonObjectMapper()
 
 // Adapted from https://github.com/thatJavaNerd/JRAW/blob/master/src/main/java/net/dean/jraw/http/RestResponse.java
-public data class RestResponse(response: Response) {
+public data class RestResponse(private val response: Response) {
     /** A list of all the headers received from the server */
     public val headers: Headers
     /** The root node of the JSON */
@@ -55,9 +54,8 @@ public data class RestResponse(response: Response) {
     }
 }
 
-public trait ApiConsumer {
-    protected val rest: RestClient
+public interface ApiConsumer {
+    val rest: RestClient
 
-    throws(javaClass<IllegalStateException>())
-    protected fun checkForError(root: JsonNode)
+    @Throws(IllegalStateException::class) fun checkForError(root: JsonNode)
 }

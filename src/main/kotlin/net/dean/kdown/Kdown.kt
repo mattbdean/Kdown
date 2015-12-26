@@ -13,6 +13,10 @@ import com.squareup.okhttp.Response
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.FileOutputStream
+import kotlin.collections.*
+import kotlin.text.split
+import kotlin.text.startsWith
+import kotlin.text.toLong
 
 public class Kdown(userAgent: String) {
     /** Headers that will be sent with every request */
@@ -36,7 +40,7 @@ public class Kdown(userAgent: String) {
         val failed: MutableList<URL> = ArrayList()
 
         fun checkCompletion(succeeded: List<URL>, failed: List<URL>, expectedTotal: Int) {
-            if (expectedTotal == succeeded.size() + failed.size())
+            if (expectedTotal == succeeded.size + failed.size)
                 tracker.resourceComplete(succeeded, failed)
         }
 
@@ -44,7 +48,7 @@ public class Kdown(userAgent: String) {
         log.info("Enqueuing request to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
-        if (targets.size() == 0) {
+        if (targets.size == 0) {
             log.info("No targets found")
             return
         }
@@ -59,7 +63,7 @@ public class Kdown(userAgent: String) {
                         val newFile = transferResponse(request, response, tracker)
                         tracker.fileComplete(url, newFile)
                         succeeded.add(url)
-                        checkCompletion(succeeded, failed, targets.size())
+                        checkCompletion(succeeded, failed, targets.size)
                     } catch (e: IOException) {
                         tracker.fileFailed(url, e)
                     }
@@ -78,7 +82,7 @@ public class Kdown(userAgent: String) {
         log.info("Requested to download content from '${request.url}' into '${request.directory}'")
         // Make a GET request to the resolved URL
         val targets = findDownloadTargets(request.url)
-        if (targets.size() == 0) {
+        if (targets.size == 0) {
             log.info("No targets found")
             return setOf()
         }
@@ -117,12 +121,12 @@ public class Kdown(userAgent: String) {
      * @throws IOException If [createDirectories] is true and they could not be created
      * @throws IllegalArgumentException If the download directory already exists, but as a file
      */
-    throws(javaClass<IllegalStateException>(),
-            javaClass<IllegalArgumentException>(),
-            javaClass<NetworkException>(),
-            javaClass<IOException>())
+    @Throws(IllegalStateException::class,
+            IllegalArgumentException::class,
+            NetworkException::class,
+            IOException::class)
     private fun transferResponse(request: DownloadRequest, response: Response, tracker: ProgressTracker): File {
-        if (!response.isSuccessful()) {
+        if (!response.isSuccessful) {
             throw NetworkException(response.code())
         }
 
@@ -137,15 +141,15 @@ public class Kdown(userAgent: String) {
         }
 
         // Get the file name
-        val fileName = response.request().url().getPath().split('/').last()
+        val fileName = response.request().url().path.split('/').last()
         log.info("File name detected as '$fileName'")
 
         // Create directories
         if (createDirectories) {
-            if (request.directory.isFile()) {
+            if (request.directory.isFile) {
                 throw IllegalArgumentException("Download directory already exists as a file: ${request.directory}")
             }
-            if (!request.directory.isDirectory() && !request.directory.mkdirs()) {
+            if (!request.directory.isDirectory && !request.directory.mkdirs()) {
                 throw IOException("Could not create directory ${request.directory}")
             }
         }
@@ -160,7 +164,7 @@ public class Kdown(userAgent: String) {
         }
 
         // Write the response body to the file
-        if (!request.directory.isDirectory()) {
+        if (!request.directory.isDirectory) {
             throw IllegalArgumentException("Download directory is not a directory or does not exist: ${request.directory}")
         }
 
@@ -203,7 +207,7 @@ public class Kdown(userAgent: String) {
      */
     private fun checkContentType(given: String, acceptable: Set<String>): Boolean {
         if (acceptable.size() == 0) return true
-        return acceptable.filter { it.startsWith(given) }.size() > 0
+        return acceptable.filter { it.startsWith(given) }.size > 0
     }
 }
 
@@ -217,7 +221,7 @@ private data class DownloadRequest(public val url: URL,
                                    public val directory: File,
                                    public val contentTypes: Set<String>)
 
-public trait ProgressTracker {
+public interface ProgressTracker {
     /** Called when a single file has failed to download. */
     public fun fileFailed(source: URL, cause: Exception)
     /** Called after some part of the file has been downloaded. */

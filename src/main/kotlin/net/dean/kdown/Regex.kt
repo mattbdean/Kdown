@@ -1,6 +1,7 @@
 package net.dean.kdown
 
-import kotlin.platform.platformStatic
+import kotlin.text.isEmpty
+import kotlin.text.toCharArray
 
 /**
  * Collection of utility method pertaining to the creation of regular expressions
@@ -24,7 +25,7 @@ public object RegexUtils {
      *
      * Adapted from http://stackoverflow.com/a/1248627/1275092
      */
-    public platformStatic fun compileGlob(glob: String, anchor: Boolean = true): String {
+    public fun compileGlob(glob: String, anchor: Boolean = true): String {
         val sb = StringBuilder()
         with (sb) {
             for (c in glob.toCharArray()) {
@@ -53,7 +54,7 @@ public object RegexUtils {
      * For example, `ofUrl(host = "example\\.com", path = "directory")` will return
      * `http[s]?://example\\.com/directory`
      */
-    public platformStatic fun ofUrl(protocol: String = "http[s]?",
+    public fun ofUrl(protocol: String = "http[s]?",
                                        host: String,
                                        path: String): String =
             "${protocol}://${host}${path}"
@@ -64,7 +65,7 @@ public object RegexUtils {
      * which matches both HTTP and HTTPS protocols. Both [host] and [path] will be turned into a regular
      * expression before being sent to [ofUrl(String, String, String)]
      */
-    public platformStatic fun ofUrlGlob(protocol: String = "",
+    public fun ofUrlGlob(protocol: String = "",
                                         host: String,
                                         path: String): String {
         if (protocol.isEmpty()) {
